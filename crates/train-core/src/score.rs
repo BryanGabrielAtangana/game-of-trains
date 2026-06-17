@@ -71,11 +71,11 @@ impl Scorer {
 
     /// Accuracy as a whole-number percentage (0 when nothing delivered yet).
     pub fn accuracy(&self) -> u32 {
-        if self.total == 0 {
-            0
-        } else {
-            self.correct * 100 / self.total
-        }
+        // `checked_div` yields `None` when nothing has been delivered yet.
+        self.correct
+            .saturating_mul(100)
+            .checked_div(self.total)
+            .unwrap_or(0)
     }
 
     fn combo_bonus(&self) -> i32 {
