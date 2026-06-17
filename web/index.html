@@ -130,6 +130,18 @@
           .then((rs) => rs.forEach((r) => r.unregister()))
           .catch(() => {});
       }
+      // WebKit masks wasm traps thrown from a requestAnimationFrame callback as
+      // a detail-less "Script error." Wrap rAF so we capture the real message.
+      const _raf = window.requestAnimationFrame.bind(window);
+      window.requestAnimationFrame = (cb) =>
+        _raf((t) => {
+          try {
+            return cb(t);
+          } catch (e) {
+            show("frame", e);
+            throw e;
+          }
+        });
     </script>
     <script src="./mq_js_bundle.js"></script>
     <script>
