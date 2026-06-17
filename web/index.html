@@ -85,25 +85,51 @@
     <canvas id="glcanvas" tabindex="0"></canvas>
 
     <script>
-      // Surface any error to the screen (no devtools on mobile).
+      // Surface everything to the screen (no devtools on mobile).
       const errBox = document.getElementById("err");
       const statusEl = document.getElementById("status");
-      function showError(label, e) {
-        statusEl.textContent = "Couldn't start the game:";
-        const msg = (e && (e.stack || e.message)) || String(e);
-        errBox.textContent += `\n[${label}] ${msg}`;
+      let sawError = false;
+      function fmt(x) {
+        if (x instanceof Error) {
+          return `${x.name}: ${x.message}\n${x.stack || ""}`;
+        }
+        if (typeof x === "object") {
+          try {
+            return JSON.stringify(x);
+          } catch {
+            return String(x);
+          }
+        }
+        return String(x);
+      }
+      function show(label, ...args) {
+        if (label !== "log") {
+          sawError = true;
+          statusEl.textContent = "Diagnostics:";
+        }
+        errBox.textContent += `\n[${label}] ${args.map(fmt).join(" ")}`;
       }
       window.addEventListener("error", (ev) =>
-        showError("error", ev.error || ev.message),
+        show("error", ev.error || ev.message),
       );
       window.addEventListener("unhandledrejection", (ev) =>
-        showError("promise", ev.reason),
+        show("promise", ev.reason),
       );
-      const _consoleError = console.error.bind(console);
-      console.error = (...args) => {
-        showError("console", args.join(" "));
-        _consoleError(...args);
-      };
+      // macroquad routes Rust panics/logs through console.log & console.error.
+      for (const m of ["log", "warn", "error"]) {
+        const orig = console[m].bind(console);
+        console[m] = (...a) => {
+          show(m, ...a);
+          orig(...a);
+        };
+      }
+      // Disable the service worker while debugging so reloads are always fresh.
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker
+          .getRegistrations()
+          .then((rs) => rs.forEach((r) => r.unregister()))
+          .catch(() => {});
+      }
     </script>
     <script src="./mq_js_bundle.js"></script>
     <script>
@@ -122,17 +148,9 @@
       try {
         load("./train-client.wasm");
       } catch (e) {
-        showError("load", e);
+        show("load", e);
       }
-
-      // Register the service worker for offline / installable play.
-      if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
-          navigator.serviceWorker
-            .register("./sw.js")
-            .catch((err) => console.warn("SW registration failed:", err));
-        });
-      }
+      // (Service worker intentionally disabled while we debug startup.)
     </script>
   </body>
 </html>
