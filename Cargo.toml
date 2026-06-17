@@ -1,0 +1,29 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/train-core",
+    "crates/train-client",
+    "crates/train-server",
+]
+
+# Default members keep `cargo test` fast on the platform-agnostic core.
+# The client (wasm) and server (needs a DB) are built explicitly.
+default-members = ["crates/train-core"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["gabrielatango"]
+repository = "https://github.com/BryanGabrielAtangana/game-of-trains"
+
+[workspace.dependencies]
+train-core = { path = "crates/train-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"

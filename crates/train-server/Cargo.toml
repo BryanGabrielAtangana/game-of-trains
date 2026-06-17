@@ -1,0 +1,15 @@
+[package]
+name = "train-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Game of Trains backend. Phase 4 adds Axum + SQLx + Postgres for daily seeds, score verification and leaderboards. For now it demonstrates server-side run verification with train-core."
+
+[[bin]]
+name = "train-server"
+path = "src/main.rs"
+
+[dependencies]
+train-core = { workspace = true }
