@@ -20,5 +20,14 @@ if [ -n "${MQ_JS}" ]; then
   echo "    refreshed web/mq_js_bundle.js from ${MQ_JS}"
 fi
 
+# macroquad 0.4.15's bundle declares some plugin globals (e.g. register_plugin)
+# without `var`, which a leading "use strict"; turns into a fatal ReferenceError
+# at load. These miniquad bundles are written for sloppy mode, so strip it.
+if head -c 13 web/mq_js_bundle.js | grep -q '"use strict";'; then
+  tail -c +14 web/mq_js_bundle.js > web/mq_js_bundle.js.tmp
+  mv web/mq_js_bundle.js.tmp web/mq_js_bundle.js
+  echo "    patched: removed leading \"use strict\"; from mq_js_bundle.js"
+fi
+
 echo "==> Done. Serve it with any static server, e.g.:"
 echo "    (cd web && python3 -m http.server 8080)   # then open http://localhost:8080"
