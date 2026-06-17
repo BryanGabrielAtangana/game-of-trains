@@ -22,16 +22,6 @@ GL_JS="$(find "${CARGO_HOME:-$HOME/.cargo}/registry/src" -path "*miniquad-${MQ_V
 if [ -n "${GL_JS}" ]; then
   cp "${GL_JS}" web/mq_js_bundle.js
   echo "    refreshed web/mq_js_bundle.js from miniquad ${MQ_VER} gl.js"
-  # TEMP DEBUG: route wasm entry calls through window.__wrapExports so frame/
-  # main/resize/input traps surface with full detail (remove once startup works).
-  python3 - <<'PATCH'
-p="web/mq_js_bundle.js"; s=open(p).read()
-s=s.replace("wasm_exports = obj.exports;",
-            "wasm_exports = (window.__wrapExports ? window.__wrapExports(obj.exports) : obj.exports);")
-s=s.replace("obj.exports.main();","wasm_exports.main();")
-open(p,"w").write(s)
-PATCH
-  echo "    applied debug export-wrapping patch"
 else
   echo "    WARNING: could not find miniquad ${MQ_VER} gl.js; keeping existing web/mq_js_bundle.js"
 fi
