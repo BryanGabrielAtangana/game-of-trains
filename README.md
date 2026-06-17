@@ -43,7 +43,7 @@ it's only practical because client and server run the *exact same Rust code*.
 | Crate / dir       | What it is                                                                 |
 | ----------------- | ------------------------------------------------------------------------- |
 | `crates/train-core`   | The engine: RNG, map generation, simulation, scoring, replay/verify. No I/O, no rendering. **Done & tested.** |
-| `crates/train-client` | The game. Phase 2 renders it with `macroquad` and ships it as WASM. *(CLI stub for now.)* |
+| `crates/train-client` | The game: a `macroquad` renderer for the engine. Runs natively and as WASM in the PWA. **Playable.** |
 | `crates/train-server` | The backend. Phase 4 adds Axum + SQLx + Postgres on Shuttle.rs. *(CLI stub for now.)* |
 | `web/`            | The installable PWA shell (manifest, service worker, icon) the WASM client mounts into. |
 | `Wise train/`     | The original 2019-era game, kept for posterity.                           |
@@ -51,24 +51,33 @@ it's only practical because client and server run the *exact same Rust code*.
 ## Running it today
 
 ```bash
-# Run the whole test suite (engine invariants, scoring, replay verification)
-cargo test --workspace
+# Run the engine test suite (invariants, scoring, replay verification)
+cargo test -p train-core
 
-# See the engine generate today's daily map and auto-play it
+# Play the game natively (opens a desktop window)
 cargo run -p train-client
 
 # Watch the server accept an honest run and reject a forged one
 cargo run -p train-server
-
-# Confirm the engine compiles to WebAssembly
-cargo build -p train-core --target wasm32-unknown-unknown
 ```
+
+### Play it in the browser (the real target)
+
+```bash
+./scripts/build-web.sh                 # builds the wasm + assembles web/
+(cd web && python3 -m http.server 8080)
+# open http://localhost:8080  — tap switches to route the trains
+```
+
+On Linux, the native client needs a few system libraries to link
+(`libx11-dev libxi-dev libgl1-mesa-dev libasound2-dev`); the WebAssembly build
+does not.
 
 ## Roadmap
 
 - [x] **Phase 0 — Scaffold:** Cargo workspace, CI (fmt + clippy + test + wasm), PWA shell.
 - [x] **Phase 1 — `train-core`:** deterministic map-gen, simulation, scoring, replay verification, full unit tests.
-- [ ] **Phase 2 — `train-client`:** `macroquad` rendering, tap-to-switch, playable endless + daily, WASM build.
+- [x] **Phase 2 — `train-client`:** `macroquad` rendering, tap-to-switch, level progression, native + WASM builds, GitHub Pages deploy.
 - [ ] **Phase 3 — Polish & PWA:** art, sound, haptics, share card, offline install.
 - [ ] **Phase 4 — `train-server`:** Axum + SQLx + Postgres, daily seeds, score verification, leaderboards, streaks.
 - [ ] **Phase 5 — Integrate & deploy:** wire client ↔ server, deploy backend (Shuttle.rs) + client (CDN).
