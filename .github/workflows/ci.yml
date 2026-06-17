@@ -41,4 +41,9 @@ jobs:
         run: cargo test --workspace
 
       - name: Client builds for WebAssembly
+        # A workflow-level RUSTFLAGS overrides .cargo/config.toml's rustflags,
+        # so re-supply the linker flag that lets macroquad's GL symbols resolve
+        # as wasm imports. (Warnings-as-errors is enforced by Clippy above.)
+        env:
+          RUSTFLAGS: "-C link-arg=--import-undefined"
         run: cargo build -p train-client --target wasm32-unknown-unknown --release
