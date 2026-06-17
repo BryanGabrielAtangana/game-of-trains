@@ -144,23 +144,24 @@
         });
       // gl.js routes its wasm entry calls through this so traps in main/frame/
       // resize/input surface with full detail instead of "Script error.".
-      window.__wrapExports = (ex) =>
-        new Proxy(ex, {
-          get(t, p) {
-            const v = t[p];
-            if (typeof v === "function") {
-              return function () {
-                try {
-                  return v.apply(t, arguments);
-                } catch (e) {
-                  show("wasm:" + String(p), e);
-                  throw e;
+      window.__wrapExports = (ex) => {
+        const o = {};
+        for (const k of Object.keys(ex)) {
+          const v = ex[k];
+          o[k] =
+            typeof v === "function"
+              ? function () {
+                  try {
+                    return v.apply(ex, arguments);
+                  } catch (e) {
+                    show("wasm:" + k, e);
+                    throw e;
+                  }
                 }
-              };
-            }
-            return v;
-          },
-        });
+              : v;
+        }
+        return o;
+      };
     </script>
     <script src="./mq_js_bundle.js"></script>
     <script>
