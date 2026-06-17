@@ -1,0 +1,19 @@
+[package]
+name = "train-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Deterministic game engine for Game of Trains: map generation, simulation, scoring and replay verification. Shared by the WASM client and the native server."
+
+[features]
+default = ["serde"]
+# Enables (de)serialization of public types so runs can travel client <-> server.
+serde = ["dep:serde"]
+
+[dependencies]
+serde = { workspace = true, optional = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

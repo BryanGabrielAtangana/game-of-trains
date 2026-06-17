@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#4fc1e9" />
+    <meta
+      name="description"
+      content="Game of Trains — route the trains to the right stations. A daily puzzle with global leaderboards and streaks."
+    />
+    <title>🚂 Game of Trains</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icons/icon.svg" />
+    <style>
+      :root {
+        color-scheme: light;
+        --sky: #4fc1e9;
+        --grass: #a0d468;
+        --ink: #2b3a42;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+        color: var(--ink);
+        background: linear-gradient(var(--sky) 0%, #8fd6ee 55%, var(--grass) 55%);
+        -webkit-tap-highlight-color: transparent;
+      }
+      #app {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: env(safe-area-inset-top) env(safe-area-inset-right)
+          env(safe-area-inset-bottom) env(safe-area-inset-left);
+      }
+      /* The macroquad WASM client renders into this canvas (Phase 2). */
+      #glcanvas {
+        display: none;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+      }
+      .splash {
+        text-align: center;
+        max-width: 22rem;
+      }
+      .splash h1 {
+        font-size: clamp(2rem, 9vw, 3.2rem);
+        margin: 0.2em 0 0.1em;
+        letter-spacing: 0.02em;
+        text-shadow: 0 2px 0 rgba(0, 0, 0, 0.08);
+      }
+      .splash p {
+        margin: 0.2em 0 1.4em;
+        font-size: 1.05rem;
+        opacity: 0.85;
+      }
+      .train {
+        font-size: clamp(3rem, 16vw, 5rem);
+        animation: chug 1.1s ease-in-out infinite;
+      }
+      @keyframes chug {
+        0%,
+        100% {
+          transform: translateY(0) rotate(-1deg);
+        }
+        50% {
+          transform: translateY(-8px) rotate(1deg);
+        }
+      }
+      .status {
+        font-size: 0.85rem;
+        opacity: 0.7;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .train {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="glcanvas" tabindex="0"></canvas>
+      <div class="splash" id="splash">
+        <div class="train">🚂</div>
+        <h1>Game of Trains</h1>
+        <p>Route every train to the station that matches its number.</p>
+        <div class="status" id="status">Engine ready — game client lands in Phase&nbsp;2.</div>
+      </div>
+    </div>
+
+    <!-- Phase 2 wiring (placeholder):
+         the macroquad bundle + generated wasm will be loaded here, e.g.
+         <script src="./pkg/mq_js_bundle.js"></script>
+         <script>load("./pkg/train_client.wasm");</script>
+    -->
+    <script>
+      // Register the service worker so the game is installable & works offline.
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("./sw.js")
+            .catch((err) => console.warn("SW registration failed:", err));
+        });
+      }
+    </script>
+  </body>
+</html>

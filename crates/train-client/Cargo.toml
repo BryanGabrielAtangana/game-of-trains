@@ -1,0 +1,15 @@
+[package]
+name = "train-client"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Game of Trains client. Phase 2 will render this with macroquad and compile it to WebAssembly; for now it is a tiny CLI that exercises train-core."
+
+[[bin]]
+name = "train-client"
+path = "src/main.rs"
+
+[dependencies]
+train-core = { workspace = true }

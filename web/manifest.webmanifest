@@ -1,0 +1,20 @@
+{
+  "name": "Game of Trains",
+  "short_name": "Trains",
+  "description": "Route the trains to the right stations. A daily puzzle with global leaderboards and streaks.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#4fc1e9",
+  "theme_color": "#4fc1e9",
+  "categories": ["games", "puzzle"],
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
