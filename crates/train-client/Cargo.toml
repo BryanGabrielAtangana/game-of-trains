@@ -5,7 +5,7 @@ edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-description = "Game of Trains client. Phase 2 will render this with macroquad and compile it to WebAssembly; for now it is a tiny CLI that exercises train-core."
+description = "Game of Trains client: a macroquad renderer for the train-core engine, playable natively and compiled to WebAssembly for the PWA."
 
 [[bin]]
 name = "train-client"
@@ -13,3 +13,5 @@ path = "src/main.rs"
 
 [dependencies]
 train-core = { workspace = true }
+# 2D game framework: tiny, cross-platform, first-class WebAssembly support.
+macroquad = "0.4"

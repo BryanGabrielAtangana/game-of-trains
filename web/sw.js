@@ -4,12 +4,14 @@
 // works offline. Bump CACHE_VERSION whenever shell assets change to invalidate
 // old caches. The WASM bundle (added in Phase 2) goes in SHELL_ASSETS too.
 
-const CACHE_VERSION = "got-shell-v1";
+const CACHE_VERSION = "got-shell-v2";
 const SHELL_ASSETS = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
   "./icons/icon.svg",
+  "./mq_js_bundle.js",
+  "./train-client.wasm",
 ];
 
 self.addEventListener("install", (event) => {

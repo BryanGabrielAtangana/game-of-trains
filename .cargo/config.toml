@@ -1,0 +1,7 @@
+# macroquad/miniquad declares the WebGL functions as `extern` and expects the
+# JS runtime (mq_js_bundle.js) to supply them when the module is instantiated.
+# Current wasm-ld errors on those undefined symbols by default, so we ask it to
+# turn undefined symbols into wasm imports instead. (Only affects final wasm
+# binaries; library crates like train-core link nothing here.)
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "link-arg=--import-undefined"]

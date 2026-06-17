@@ -25,6 +25,12 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
+      - name: System libraries (macroquad native link deps)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libx11-dev libxi-dev libgl1-mesa-dev libasound2-dev
+
       - name: Formatting
         run: cargo fmt --all -- --check
 
@@ -34,5 +40,10 @@ jobs:
       - name: Tests
         run: cargo test --workspace
 
-      - name: Engine builds for WebAssembly
-        run: cargo build -p train-core --target wasm32-unknown-unknown
+      - name: Client builds for WebAssembly
+        # A workflow-level RUSTFLAGS overrides .cargo/config.toml's rustflags,
+        # so re-supply the linker flag that lets macroquad's GL symbols resolve
+        # as wasm imports. (Warnings-as-errors is enforced by Clippy above.)
+        env:
+          RUSTFLAGS: "-C link-arg=--import-undefined"
+        run: cargo build -p train-client --target wasm32-unknown-unknown --release
