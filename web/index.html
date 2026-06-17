@@ -142,21 +142,30 @@
             throw e;
           }
         });
+      // gl.js routes its wasm entry calls through this so traps in main/frame/
+      // resize/input surface with full detail instead of "Script error.".
+      window.__wrapExports = (ex) =>
+        new Proxy(ex, {
+          get(t, p) {
+            const v = t[p];
+            if (typeof v === "function") {
+              return function () {
+                try {
+                  return v.apply(t, arguments);
+                } catch (e) {
+                  show("wasm:" + String(p), e);
+                  throw e;
+                }
+              };
+            }
+            return v;
+          },
+        });
     </script>
     <script src="./mq_js_bundle.js"></script>
     <script>
-      // Make the canvas track the viewport (incl. device pixel ratio) so the
-      // game fills the screen crisply on mobile.
-      const canvas = document.getElementById("glcanvas");
-      function resizeCanvas() {
-        const dpr = window.devicePixelRatio || 1;
-        canvas.width = Math.floor(window.innerWidth * dpr);
-        canvas.height = Math.floor(window.innerHeight * dpr);
-      }
-      resizeCanvas();
-      window.addEventListener("resize", resizeCanvas);
-
-      // Boot the WebAssembly game.
+      // Boot the WebAssembly game. miniquad owns the #glcanvas sizing (via CSS
+      // width/height:100% + its dpi handling); we no longer touch it manually.
       try {
         load("./train-client.wasm");
       } catch (e) {

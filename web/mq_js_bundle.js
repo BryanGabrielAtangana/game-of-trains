@@ -1538,7 +1538,7 @@ function load(wasm_path) {
             .then(
                 obj => {
                     wasm_memory = obj.exports.memory;
-                    wasm_exports = obj.exports;
+                    wasm_exports = (window.__wrapExports ? window.__wrapExports(obj.exports) : obj.exports);
 
                     var crate_version = wasm_exports.crate_version();
                     if (version != crate_version) {
@@ -1547,7 +1547,7 @@ function load(wasm_path) {
                             ", miniquad crate version is: " + crate_version);
                     }
                     init_plugins(plugins);
-                    obj.exports.main();
+                    wasm_exports.main();
                 })
             .catch(err => {
                 console.error(err);
@@ -1562,7 +1562,7 @@ function load(wasm_path) {
             })
             .then(function (obj) {
                 wasm_memory = obj.exports.memory;
-                wasm_exports = obj.exports;
+                wasm_exports = (window.__wrapExports ? window.__wrapExports(obj.exports) : obj.exports);
 
                 var crate_version = wasm_exports.crate_version();
                 if (version != crate_version) {
@@ -1571,7 +1571,7 @@ function load(wasm_path) {
                         ", rust sapp-wasm crate version is: " + crate_version);
                 }
                 init_plugins(plugins);
-                obj.exports.main();
+                wasm_exports.main();
             })
             .catch(err => {
                 console.error("WASM failed to load, probably incompatible gl.js version");
