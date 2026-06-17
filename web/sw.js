@@ -4,7 +4,7 @@
 // works offline. Bump CACHE_VERSION whenever shell assets change to invalidate
 // old caches. The WASM bundle (added in Phase 2) goes in SHELL_ASSETS too.
 
-const CACHE_VERSION = "got-shell-v2";
+const CACHE_VERSION = "got-shell-v3";
 const SHELL_ASSETS = [
   "./",
   "./index.html",
