@@ -23,3 +23,4 @@ pub const PANEL: Color = Color::new(0.0, 0.0, 0.0, 0.45);
 pub const WHITE: Color = rgb(255, 255, 255);
 pub const GOOD: Color = rgb(140, 193, 82);
 pub const BAD: Color = rgb(237, 85, 101);
+pub const SMOKE: Color = rgb(236, 240, 241);

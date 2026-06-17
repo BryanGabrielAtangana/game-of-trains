@@ -85,8 +85,95 @@
 
     <script src="./mq_js_bundle.js"></script>
     <script>
-      // Boot the WebAssembly game. miniquad manages the #glcanvas size itself
-      // (via the CSS width/height:100% + its dpi handling) — don't touch it here.
+      // ---- Host bridge: Web Audio sound effects + safe-area inset ----
+      // Exposed to the wasm via miniquad's plugin hook (no audio plugin bundle).
+      let audioCtx = null;
+      function ctx() {
+        if (!audioCtx) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (AC) audioCtx = new AC();
+        }
+        return audioCtx;
+      }
+      // iOS requires a user gesture to start/resume audio.
+      function unlockAudio() {
+        const c = ctx();
+        if (c && c.state === "suspended") c.resume();
+      }
+      window.addEventListener("pointerdown", unlockAudio, { passive: true });
+      window.addEventListener("touchstart", unlockAudio, { passive: true });
+
+      // Schedule a single oscillator note with a short gain envelope.
+      function tone(c, t0, freq, dur, type, vol) {
+        const osc = c.createOscillator();
+        const g = c.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, t0);
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(vol, t0 + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        osc.connect(g).connect(c.destination);
+        osc.start(t0);
+        osc.stop(t0 + dur + 0.02);
+      }
+
+      // Synthesize a short sound for each Sfx id (must match crates/.../audio.rs).
+      function playSfx(id) {
+        const c = ctx();
+        if (!c || c.state === "suspended") return;
+        const t = c.currentTime;
+        switch (id) {
+          case 0: // Good — bright two-note rise
+            tone(c, t, 660, 0.12, "sine", 0.25);
+            tone(c, t + 0.09, 990, 0.14, "sine", 0.25);
+            break;
+          case 1: // Bad — low buzz
+            tone(c, t, 160, 0.22, "square", 0.18);
+            break;
+          case 2: // Ugly — descending thud
+            tone(c, t, 220, 0.1, "sawtooth", 0.22);
+            tone(c, t + 0.08, 110, 0.22, "sawtooth", 0.22);
+            break;
+          case 3: // Switch — tiny click
+            tone(c, t, 1200, 0.04, "square", 0.12);
+            break;
+          case 4: // Win — major arpeggio
+            [523, 659, 784, 1047].forEach((f, i) =>
+              tone(c, t + i * 0.1, f, 0.18, "triangle", 0.22),
+            );
+            break;
+          case 5: // Lose — two-note fall
+            tone(c, t, 440, 0.18, "triangle", 0.2);
+            tone(c, t + 0.16, 330, 0.26, "triangle", 0.2);
+            break;
+        }
+      }
+
+      // env(safe-area-inset-top) in physical pixels (matches macroquad's buffer).
+      let safeProbe = null;
+      function safeAreaTopPx() {
+        if (!safeProbe) {
+          safeProbe = document.createElement("div");
+          safeProbe.style.cssText =
+            "position:fixed;top:0;left:0;padding-top:env(safe-area-inset-top);visibility:hidden;pointer-events:none;";
+          document.body.appendChild(safeProbe);
+        }
+        const css = parseFloat(getComputedStyle(safeProbe).paddingTop) || 0;
+        return css * (window.devicePixelRatio || 1);
+      }
+
+      // Register the bridge as a miniquad plugin (adds env imports the wasm needs).
+      miniquad_add_plugin({
+        register_plugin: (importObject) => {
+          importObject.env.play_sfx = (id) => playSfx(id >>> 0);
+          importObject.env.safe_area_top = () => safeAreaTopPx();
+        },
+        on_init: () => {},
+        version: 1,
+        name: "game_host",
+      });
+
+      // Boot the WebAssembly game. miniquad manages the #glcanvas size itself.
       load("./train-client.wasm");
 
       // Register the service worker for offline / installable play.

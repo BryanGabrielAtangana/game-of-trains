@@ -84,9 +84,15 @@ pub fn draw_map(sim: &Simulation, layout: &Layout, time: f32) {
             NodeKind::DeadEnd => draw_dead_end(p, cell),
             NodeKind::Track => {
                 if i == map.root {
-                    // Gently pulsing origin.
-                    let r = cell * 0.22 * (1.0 + 0.12 * (time * 3.0).sin());
-                    draw_circle(p.x, p.y, r, theme::ROOT);
+                    // Pulsing origin — brighter and faster while a combo is live.
+                    let combo = sim.scorer().combo >= 2;
+                    let (base, amp, speed, col) = if combo {
+                        (0.26, 0.20, 6.0, theme::RAIL_ACTIVE)
+                    } else {
+                        (0.22, 0.12, 3.0, theme::ROOT)
+                    };
+                    let r = cell * base * (1.0 + amp * (time * speed).sin());
+                    draw_circle(p.x, p.y, r, col);
                     draw_circle_lines(p.x, p.y, r, 2.0, theme::WHITE);
                 } else if node.is_switch() {
                     draw_switch(p, cell, layout, sim, i);
@@ -170,7 +176,11 @@ pub fn draw_trains(sim: &Simulation, layout: &Layout) {
 fn train_pos(map: &Map, layout: &Layout, t: &Train) -> Vec2 {
     let from = layout.pt(map.nodes[t.from].pos);
     match t.to {
-        Some(to) => from.lerp(layout.pt(map.nodes[to].pos), t.fraction()),
+        // Ease the per-edge motion so trains accelerate out and settle in.
+        Some(to) => from.lerp(
+            layout.pt(map.nodes[to].pos),
+            crate::fx::smoothstep(t.fraction()),
+        ),
         None => from,
     }
 }

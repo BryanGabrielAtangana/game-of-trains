@@ -5,6 +5,8 @@
 //! `train-core`; this crate only renders state and feeds in taps.
 
 mod app;
+mod audio;
+mod fx;
 mod theme;
 mod view;
 

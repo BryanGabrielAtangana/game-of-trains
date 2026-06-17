@@ -52,7 +52,24 @@ pub use sim::{generate_schedule, Simulation, Train, TrainSpawn};
 /// platforms and trivially reproducible.
 pub fn daily_seed(year: i32, month: u32, day: u32) -> u64 {
     let packed = (year as u64) << 16 | (month as u64) << 8 | day as u64;
-    let mut z = packed.wrapping_add(0x9E3779B97F4A7C15);
+    splitmix64(packed)
+}
+
+/// Derive the deterministic daily seed from a Unix timestamp (seconds).
+///
+/// The client passes the device clock here; everything in the same UTC day maps
+/// to the same seed (so the daily challenge is shared and streaks are fair),
+/// while consecutive days differ. Avoids any calendar math by keying on the
+/// integer day index `floor(secs / 86400)`.
+pub fn daily_seed_from_unix(unix_seconds: u64) -> u64 {
+    let day_index = unix_seconds / 86_400;
+    // Salt so a day index N doesn't collide with a packed YYYYMMDD that equals N.
+    splitmix64(day_index ^ 0x6461795F696E6478) // "day_indx"
+}
+
+/// SplitMix64 finalizer — stable across platforms (wrapping integer math only).
+fn splitmix64(x: u64) -> u64 {
+    let mut z = x.wrapping_add(0x9E3779B97F4A7C15);
     z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
     z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
     z ^ (z >> 31)
@@ -67,6 +84,15 @@ mod tests {
         assert_eq!(daily_seed(2026, 6, 17), daily_seed(2026, 6, 17));
         assert_ne!(daily_seed(2026, 6, 17), daily_seed(2026, 6, 18));
         assert_ne!(daily_seed(2026, 6, 17), daily_seed(2025, 6, 17));
+    }
+
+    #[test]
+    fn daily_seed_from_unix_is_per_day() {
+        let day = 1_750_000_000u64; // some Tuesday in 2025
+        let same_day = day + 3600; // +1h, same UTC day
+        let next_day = day + 86_400; // +1 day
+        assert_eq!(daily_seed_from_unix(day), daily_seed_from_unix(same_day));
+        assert_ne!(daily_seed_from_unix(day), daily_seed_from_unix(next_day));
     }
 
     #[test]
