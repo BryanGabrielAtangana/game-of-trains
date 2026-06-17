@@ -78,11 +78,33 @@
     <div id="splash">
       <div>
         <div class="train">🚂</div>
-        <p>Loading Game of Trains…</p>
+        <p id="status">Loading Game of Trains…</p>
+        <pre id="err" style="white-space:pre-wrap;color:#b00;font-size:12px;max-width:90vw;margin:0 auto;"></pre>
       </div>
     </div>
     <canvas id="glcanvas" tabindex="0"></canvas>
 
+    <script>
+      // Surface any error to the screen (no devtools on mobile).
+      const errBox = document.getElementById("err");
+      const statusEl = document.getElementById("status");
+      function showError(label, e) {
+        statusEl.textContent = "Couldn't start the game:";
+        const msg = (e && (e.stack || e.message)) || String(e);
+        errBox.textContent += `\n[${label}] ${msg}`;
+      }
+      window.addEventListener("error", (ev) =>
+        showError("error", ev.error || ev.message),
+      );
+      window.addEventListener("unhandledrejection", (ev) =>
+        showError("promise", ev.reason),
+      );
+      const _consoleError = console.error.bind(console);
+      console.error = (...args) => {
+        showError("console", args.join(" "));
+        _consoleError(...args);
+      };
+    </script>
     <script src="./mq_js_bundle.js"></script>
     <script>
       // Make the canvas track the viewport (incl. device pixel ratio) so the
@@ -97,7 +119,11 @@
       window.addEventListener("resize", resizeCanvas);
 
       // Boot the WebAssembly game.
-      load("./train-client.wasm");
+      try {
+        load("./train-client.wasm");
+      } catch (e) {
+        showError("load", e);
+      }
 
       // Register the service worker for offline / installable play.
       if ("serviceWorker" in navigator) {
