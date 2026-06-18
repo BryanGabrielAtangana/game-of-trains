@@ -1,4 +1,4 @@
-name: Deploy web placeholder to GitHub Pages
+name: Deploy Rail Royale to GitHub Pages
 
 on:
   push:
@@ -14,14 +14,25 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
-# The Rail Royale client doesn't exist yet (Phase 1 is engine-only), so Pages
-# just serves a static "coming soon" placeholder. This will build and publish the
-# WebAssembly client once it's added.
+# Build the WebAssembly client (plain wasm32, no wasm-bindgen) and publish it
+# alongside the static shell in web/.
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build WASM client
+        run: ./scripts/build-web.sh
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

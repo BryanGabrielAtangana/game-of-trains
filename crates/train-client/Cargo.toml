@@ -1,0 +1,16 @@
+[package]
+name = "train-client"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Rail Royale web client (WASM): renders the battle on a 2D canvas and lets you play vs the AI. All game/render logic is Rust; a tiny JS loader draws the display list."
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+train-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

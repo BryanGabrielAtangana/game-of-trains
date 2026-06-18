@@ -140,8 +140,15 @@ over-committed routes. No single dominant pick = real decisions.
 3. **Async online PvP** — match server (Axum + SQLx + Postgres on Shuttle.rs):
    create/join match, submit a turn's orders, server resolves + verifies, push
    the resolved state to both. Reuses the Phase-4 backend foundation.
-4. **Polish & ladder** — full train roster, deck/loadout, MMR, spectate/replays,
-   live turns.
+4. ✅ **Web client (vs-AI slice)** — `crates/train-client`, a `wasm32` `cdylib`
+   rendering the battle on a 2D canvas (menu → plan → resolve → win/lose),
+   mobile-first, playable vs the Phase-2 AI offline. **No game framework / no
+   `wasm-bindgen`** (the boot fragility that sank the puzzle client): all game and
+   *rendering* logic is Rust emitting a JSON **display list**, painted by a ~60-line
+   JS loader; the wasm has zero imports. The engine gained `resolve_turn_frames`
+   (per-tick snapshots) to animate a turn and to feed future replays. Deployed to
+   GitHub Pages. **Still to do (full Phase 4):** richer juice/animation, player
+   switch-routing polish, decks/loadout, MMR, replays, live turns.
 
 ## 12. Out of scope (for now) / risks
 - Real-time shared-world RTS (the "2.0" dream) — heavier netcode; revisit later.
