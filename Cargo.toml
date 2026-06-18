@@ -1,14 +1,8 @@
 [workspace]
 resolver = "2"
-members = [
-    "crates/train-core",
-    "crates/train-client",
-    "crates/train-server",
-]
-
-# Default members keep `cargo test` fast on the platform-agnostic core.
-# The client (wasm) and server (needs a DB) are built explicitly.
-default-members = ["crates/train-core"]
+members = ["crates/train-core"]
+# The retired daily-puzzle crates live under legacy/ (kept for history, not built).
+exclude = ["legacy"]
 
 [workspace.package]
 version = "0.1.0"

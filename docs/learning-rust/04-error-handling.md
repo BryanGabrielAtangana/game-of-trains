@@ -1,157 +1,111 @@
-# Chapter 4 — Error handling: `Option` & `Result`
+# Chapter 4 — `Option` & error handling
 
-Rust has no `null` and no exceptions. Instead, "might be absent" is `Option<T>`
-and "might fail" is `Result<T, E>`. Both are ordinary enums you've already met in
-Chapter 2 — the language just gives them special syntax support.
+Rust has no `null` and no exceptions. "Might be absent" is `Option<T>`; "might
+fail" is `Result<T, E>`. Both are ordinary enums (Chapter 2) with special syntax
+support. The battle engine leans heavily on `Option`; `Result` arrives with the
+match server.
 
 ## `Option<T>`: a value, or nothing
 
-`Option<T>` is `Some(T)` or `None`. The map's navigation returns one — a terminal
-node has no next step:
+`Option<T>` is `Some(T)` or `None`. A train's next node is optional — it's `None`
+once the train has reached a terminal (`unit.rs`):
 
 ```rust
-// crates/train-core/src/map.rs
-pub fn next(&self, node: usize, active: bool) -> Option<usize> {
-    let n = &self.nodes[node];
-    match n.children.len() {
-        0 => None,                                   // station / dead-end: nowhere to go
-        1 => Some(n.children[0]),                    // straight track
-        _ => Some(n.children[usize::from(active)]),  // switch: follow the active child
+pub struct Train {
+    // ...
+    pub to: Option<NodeId>, // None once it has reached the enemy King
+}
+```
+
+And `Arena::route` (`arena.rs`) returns `None` at a terminal node:
+
+```rust
+pub fn route(&self, faction: Faction, node: NodeId, choice: usize) -> Option<NodeId> {
+    let exits = &self.nodes[node].exits[faction.index()];
+    match exits.len() {
+        0 => None,
+        n => Some(exits[choice.min(n - 1)]),
     }
 }
 ```
 
-The caller *cannot* accidentally use a missing value as if it were present — the
-type is `Option<usize>`, not `usize`, so they must deal with the `None` case. This
-is how Rust abolishes null-pointer bugs.
+The caller *cannot* use a missing node as if it existed — the type is
+`Option<NodeId>`, not `NodeId`.
 
 ## Consuming an `Option`
 
-The simulation stores each train's target as `to: Option<usize>` (a train at a
-terminal has none). Several idioms appear in `sim.rs`:
+In `move_trains` (`resolve.rs`) the engine asserts an invariant it knows holds:
 
 ```rust
-// In step(): a train mid-board is guaranteed to have a destination, so we assert
-// the invariant with a clear message if it's ever violated.
-let arrived = t.to.expect("active train always has a destination node");
-
-// In resolve(): fall back to the root if somehow absent (defensive).
-let node = train.to.unwrap_or(self.map.root);
+let arrived = t.to.expect("active train has a destination");
 ```
 
-- `.expect(msg)` unwraps `Some`, or panics with `msg`. Use it to assert
-  invariants you *know* hold — the message documents the assumption.
-- `.unwrap_or(default)` unwraps `Some`, or returns a fallback. No panic.
-- There's also `.unwrap_or_else(|| ...)` (lazy default), `.map(...)`,
-  `.and_then(...)`, and `if let Some(x) = opt { ... }` for conditional use.
+- `.expect(msg)` unwraps `Some` or panics with `msg` — use it for invariants you
+  *know* are true; the message documents the assumption.
+- Others: `.unwrap_or(default)`, `.map(...)`, `.and_then(...)`, and `if let
+  Some(x) = opt { ... }`.
 
-## `is_some_and`: test the inside without unwrapping
-
-From `Simulation::toggle`:
+`let ... else` handles the absent case by bailing early (also `resolve.rs`):
 
 ```rust
-if self.map.nodes.get(node).is_some_and(|n| n.is_switch()) {
-    self.switches[node] = !self.switches[node];
-}
+let Some(node) = occ[i] else { continue }; // skip dead/!placed trains
 ```
 
-Two safety nets in one line:
+## `is_none_or` / `is_some_and`: test the inside
 
-- `self.map.nodes.get(node)` returns `Option<&Node>` — indexing that can't panic
-  even if `node` is out of range (compare to `self.map.nodes[node]`, which would).
-- `.is_some_and(|n| n.is_switch())` is `true` only when the node exists *and*
-  passes the test. An out-of-range or non-switch node is silently ignored — which
-  is exactly the behaviour we documented.
-
-## `Result<T, E>`: success or a typed failure
-
-The crown jewel of the engine is run verification in
-[`crates/train-core/src/replay.rs`](../../crates/train-core/src/replay.rs). Its
-signature tells the whole story:
+Targeting code keeps the closest in-range candidate without unwrapping:
 
 ```rust
-pub fn verify(run: &Run) -> Result<Verified, RejectReason> {
-```
-
-A caller gets back either `Ok(Verified)` (the authoritative score to store) or
-`Err(RejectReason)` explaining *why* it was rejected. The error type is a custom
-enum that enumerates the failure modes:
-
-```rust
-pub enum RejectReason {
-    ScoreMismatch { claimed: i32, actual: i32 },
-    MalformedInput,
-}
-```
-
-Returning errors as values (not exceptions) means the compiler forces every
-caller to consider failure, and the failure modes are documented in the type.
-
-## Producing errors early with `return Err(...)`
-
-`verify` bails out the moment something is wrong:
-
-```rust
-if run.inputs.len() > MAX_INPUTS {
-    return Err(RejectReason::MalformedInput);
-}
-// ...
-if next < inputs.len() && inputs[next].tick < now {
-    return Err(RejectReason::MalformedInput);
-}
-// ...
-if final_score.score != run.claimed_score {
-    return Err(RejectReason::ScoreMismatch {
-        claimed: run.claimed_score,
-        actual: final_score.score,
-    });
-}
-Ok(Verified { /* ... */ })
-```
-
-## The `?` operator: propagate failures concisely
-
-The server (Phase 4) will chain fallible calls. `?` unwraps an `Ok`/`Some` or
-returns the error from the enclosing function. A sketch of how a handler will use
-`verify`:
-
-```rust
-fn handle_submit(run: &Run) -> Result<Verified, RejectReason> {
-    let verified = verify(run)?;   // on Err, returns it immediately
-    // ... store verified.score in the database ...
-    Ok(verified)
-}
-```
-
-`?` is the single most common error-handling tool in real Rust; it turns nested
-match pyramids into linear, readable code.
-
-## How the tests pin this down
-
-In `replay.rs`'s tests, `cheating_is_rejected` matches on the exact error:
-
-```rust
-match verify(&run) {
-    Err(RejectReason::ScoreMismatch { claimed, actual }) => {
-        assert_eq!(claimed, run.claimed_score);
-        assert_ne!(actual, claimed);
+fn consider(best: &mut Option<(i64, Target)>, d: i64, r2: i64, target: Target) {
+    if d <= r2 && best.as_ref().is_none_or(|(bd, _)| d < *bd) {
+        *best = Some((d, target));
     }
-    other => panic!("expected ScoreMismatch, got {other:?}"),
 }
 ```
 
-Typed errors make assertions precise: the test doesn't just check "it failed," it
-checks *how*.
+`best.is_none_or(pred)` is `true` when there's no best yet *or* the new candidate
+is closer — exactly "take it if it's the first or the nearest".
+
+## `Result<T, E>`: success or a typed failure (coming with the server)
+
+The engine itself can't "fail" — a turn always resolves. But the **match server**
+(Phase 3) will validate submissions and return typed errors, e.g.:
+
+```rust
+enum SubmitError { NotYourTurn, IllegalOrders, OutOfSync }
+
+fn submit(state: &mut BattleState, who: Faction, orders: &Orders)
+    -> Result<Vec<TurnEvent>, SubmitError>
+{
+    if !is_players_turn(state, who) {
+        return Err(SubmitError::NotYourTurn);
+    }
+    let events = train_core::resolve_turn(state, /* ... */);
+    Ok(events)
+}
+```
+
+- `Result<T, E>` forces every caller to consider failure; the failure modes are
+  documented in the type.
+- The **`?` operator** unwraps `Ok`/`Some` or returns the error from the enclosing
+  function — turning nested matches into linear code:
+
+```rust
+let verified = verify(&run)?;   // on Err, return it immediately
+```
+
+That `verify(&run)?` pattern is exactly how the old puzzle's replay checker worked
+(now archived under `legacy/`), and how the battle server will re-simulate and
+validate each turn.
 
 ## Exercises
 
-1. Add a third `RejectReason`, e.g. `UnknownLevel`, and make `verify` return it
-   when `run.level == 0`. Watch the test `match` in `cheating_is_rejected` still
-   compile (its `other =>` arm catches new variants) — then add a dedicated test.
-2. Replace the `.expect(...)` in `step()` with `if let Some(arrived) = t.to {
-   ... }`. Does the logic still hold? Which communicates intent better here?
-3. Write a function returning `Result<u32, RejectReason>` that parses a level from
-   a `&str` (use `str::parse`) and uses `?` to propagate the parse error mapped
-   into `RejectReason::MalformedInput`. (Hint: `.map_err(...)`.)
+1. Change `move_trains`'s `.expect(...)` to `let Some(arrived) = t.to else {
+   continue; }`. Does the logic still hold? Which communicates intent better here?
+2. Write `fn first_switch(arena: &Arena, f: Faction) -> Option<NodeId>` returning
+   the first node where `arena.is_switch(f, node)` — using `.find(...)` (Chapter 5)
+   and returning `Option`.
+3. Sketch a `Result`-returning `parse_lane(s: &str) -> Result<usize, SubmitError>`
+   using `str::parse` and `.map_err(...)` + `?`.
 
 Next: [Chapter 5 — Collections & iterators →](./05-collections-and-iterators.md)
