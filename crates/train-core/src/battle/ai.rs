@@ -319,4 +319,35 @@ mod tests {
             "must terminate"
         );
     }
+
+    /// Play a full match (A = `a`, B = `b`) to its terminal status.
+    fn play_match(a: AiLevel, b: AiLevel) -> Status {
+        let mut s = BattleState::new(cfg());
+        while !s.is_over() {
+            let oa = ai_orders(&s, Faction::A, a);
+            let ob = ai_orders(&s, Faction::B, b);
+            resolve_turn(&mut s, &oa, &ob);
+        }
+        s.status
+    }
+
+    #[test]
+    fn stronger_difficulty_wins_and_mirrors_draw() {
+        // The difficulty ladder is real on the (balanced) default config, and a
+        // guard against future stat/economy regressions making games stall.
+        assert_eq!(
+            play_match(AiLevel::Normal, AiLevel::Easy),
+            Status::Won(Faction::A)
+        );
+        assert_eq!(
+            play_match(AiLevel::Hard, AiLevel::Easy),
+            Status::Won(Faction::A)
+        );
+        assert_eq!(
+            play_match(AiLevel::Hard, AiLevel::Normal),
+            Status::Won(Faction::A)
+        );
+        // Symmetric play between equals is a draw.
+        assert_eq!(play_match(AiLevel::Normal, AiLevel::Normal), Status::Draw);
+    }
 }
