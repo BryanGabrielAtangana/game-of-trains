@@ -2,101 +2,79 @@
 
 ## Install the toolchain
 
-Rust is installed via `rustup`, which manages compiler versions and targets:
+Rust is installed via `rustup`:
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-This repo pins its toolchain in [`rust-toolchain.toml`](../../rust-toolchain.toml):
-
-```toml
-[toolchain]
-channel = "stable"
-components = ["rustfmt", "clippy"]
-targets = ["wasm32-unknown-unknown"]
-```
-
-When you `cd` into the project, `rustup` automatically uses this exact setup —
-the same `stable` channel, with `rustfmt`, `clippy`, and the WebAssembly target
-already installed. Reproducible environments for free.
+This repo pins its toolchain in [`rust-toolchain.toml`](../../rust-toolchain.toml)
+(`stable` + `rustfmt`, `clippy`, and the `wasm32-unknown-unknown` target), so a
+fresh checkout uses the exact same setup automatically.
 
 ## The tools you'll use constantly
 
 | Command | What it does |
 | ------- | ------------ |
 | `cargo build` | Compile. |
-| `cargo test` | Compile and run tests. |
-| `cargo run -p train-client` | Run a specific crate's binary. |
-| `cargo fmt --all` | Auto-format (no style debates, ever). |
+| `cargo test -p train-core` | Compile and run the engine's tests. |
+| `cargo fmt --all` | Auto-format (no style debates). |
 | `cargo clippy --all-targets` | Lint — catches bugs and un-idiomatic code. |
-| `cargo doc --open` | Build and view the API docs from `///` comments. |
+| `cargo doc --open` | Build and view docs from `///` comments. |
 
-`cargo` is the build tool, package manager, test runner, and doc generator in
-one. You will rarely call `rustc` directly.
+## Crates and the workspace
 
-## What a "crate" and a "workspace" are
+- A **crate** is the unit of compilation — a library (`lib.rs`) or binary (`main.rs`).
+- A **workspace** groups crates under one `Cargo.lock` / `target/`.
 
-- A **crate** is the unit of compilation — either a library (`lib.rs`) or a
-  binary (`main.rs`).
-- A **workspace** is several crates that share one `Cargo.lock` and `target/`
-  directory.
-
-Open the top-level [`Cargo.toml`](../../Cargo.toml). It has no `[package]` — it's
-a pure workspace manifest:
+Open the top-level [`Cargo.toml`](../../Cargo.toml):
 
 ```toml
 [workspace]
-members = [
-    "crates/train-core",
-    "crates/train-client",
-    "crates/train-server",
-]
-default-members = ["crates/train-core"]
+resolver = "2"
+members = ["crates/train-core"]
+# The retired daily-puzzle crates live under legacy/ (kept for history, not built).
+exclude = ["legacy"]
 ```
 
-`default-members` is why `cargo test` (with no `-p`) runs only the fast,
-dependency-free engine tests. To touch a specific crate, name it: `cargo run -p
-train-client`.
+Today the workspace is a single crate, **`train-core`** — the deterministic battle
+engine. (The earlier puzzle game is archived under `legacy/`.)
 
 ## Your first run
 
 ```bash
-cargo test --workspace        # 39 tests should pass
-cargo run -p train-client     # prints today's generated map and an auto-play
-cargo run -p train-server     # accepts an honest run, rejects a forged one
+cargo test -p train-core    # ~20 tests should pass
+cargo doc -p train-core --open
 ```
 
-If those work, your environment is correct and you understand the project's
-shape. 
+If those work, your environment is correct.
 
-## Anatomy of a tiny Rust program
+## Anatomy of the engine's entry points
 
-Look at [`crates/train-client/src/main.rs`](../../crates/train-client/src/main.rs):
+`train-core` is a *library*, not a binary — there's no `main()`. Its public API
+lives in [`crates/train-core/src/lib.rs`](../../crates/train-core/src/lib.rs),
+which re-exports the battle types and includes a runnable doc example:
 
 ```rust
-use train_core::{daily_seed, GameConfig, NodeKind, Simulation};
+use train_core::{BattleConfig, BattleState, Orders, TrainKind};
 
-fn main() {
-    let seed = daily_seed(2026, 6, 17);
-    // ...
-}
+let mut state = BattleState::new(BattleConfig::default());
+let a = Orders::new().deploy(TrainKind::Rocket, 0);
+let b = Orders::new();
+train_core::resolve_turn(&mut state, &a, &b);
 ```
 
 - `use` brings names into scope (like `import`).
-- `fn main()` is the entry point of a binary.
-- `let seed = ...` binds a variable. **Bindings are immutable by default** —
-  you'd write `let mut seed` to reassign it. This default is one of the first
-  ways Rust nudges you toward safer code.
+- `let state = ...` binds a variable; **bindings are immutable by default** —
+  `let mut state` is needed to mutate it. That default is one of the first ways
+  Rust nudges you toward safer code.
 
 ## Exercises
 
-1. Run `cargo doc --open` and browse the `train_core` docs. Notice every public
-   item has documentation — that comes from the `///` comments in the source.
-2. In `train-client`'s `main.rs`, change the date passed to `daily_seed`. Re-run
-   and confirm the generated map changes. Why does it change? (Chapter 8 explains
-   the determinism behind it.)
-3. Run `cargo fmt --all` after deliberately mis-indenting a line. Watch it fix
-   itself.
+1. Run `cargo doc -p train-core --open` and browse the API. Notice every public
+   item is documented from its `///` comments.
+2. In the doc example, change `TrainKind::Rocket` to `TrainKind::Armored`. Re-run
+   `cargo test --doc -p train-core`. Does it still pass?
+3. Run `cargo fmt --all` after mis-indenting a line and watch it fix itself.
 
 Next: [Chapter 1 — Ownership & borrowing →](./01-ownership-and-borrowing.md)

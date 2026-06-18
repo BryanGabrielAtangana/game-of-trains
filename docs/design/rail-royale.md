@@ -121,8 +121,9 @@ over-committed routes. No single dominant pick = real decisions.
   and the plan-phase order UI.
 
 ## 11. Phased build path
-1. **Engine combat slice** — `battle` module: arena gen, orders, `resolve_turn`,
-   towers, 2–3 train types, win check. Unit-tested, deterministic. *No UI.*
+1. ✅ **Engine combat slice** — `battle` module: arena gen, orders, `resolve_turn`,
+   towers, 3 train types, win check. Unit-tested, deterministic. *No UI.* (Done —
+   `crates/train-core/src/battle/`.)
 2. **Vs-AI single-player** — a simple heuristic opponent to tune feel & balance
    entirely offline (and it doubles as a tutorial/onboarding mode).
 3. **Async online PvP** — match server (Axum + SQLx + Postgres on Shuttle.rs):

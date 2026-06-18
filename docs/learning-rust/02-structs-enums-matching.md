@@ -1,146 +1,131 @@
 # Chapter 2 — Structs, enums & pattern matching
 
-Rust models data with two building blocks: **structs** ("has-a") and **enums**
-("is-one-of"). Combined with `match`, they make illegal states hard to represent
-and force you to handle every case.
+Rust models data with **structs** ("has-a") and **enums** ("is-one-of"). With
+`match`, they make illegal states hard to represent and force you to handle every
+case.
 
 ## Structs
 
-A struct groups related fields. See `Pos` in
-[`crates/train-core/src/geometry.rs`](../../crates/train-core/src/geometry.rs):
+A struct groups fields. `TrainStats` in
+[`unit.rs`](../../crates/train-core/src/battle/unit.rs):
 
 ```rust
-pub struct Pos {
-    pub x: i32,
-    pub y: i32,
+pub struct TrainStats {
+    pub hp: i32,
+    pub damage: i32,
+    pub range: i32,
+    pub edge_ticks: u32,
+    pub cost: u32,
 }
 
-impl Pos {
-    pub const fn new(x: i32, y: i32) -> Self {
-        Pos { x, y }
-    }
-
-    pub fn step(self, dir: Direction) -> Pos {
-        let (dx, dy) = dir.delta();
-        Pos::new(self.x + dx, self.y + dy)
+impl TrainStats {
+    pub const fn new(hp: i32, damage: i32, range: i32, edge_ticks: u32, cost: u32) -> Self {
+        TrainStats { hp, damage, range, edge_ticks, cost }
     }
 }
 ```
 
-Things to notice:
+- `impl TrainStats { ... }` holds methods/associated functions, separate from the data.
+- `new` is an **associated function** (no `self`) — `TrainStats::new(...)`.
+- `Self` aliases the type; `const fn` means it can run at compile time.
 
-- `impl Pos { ... }` is where methods and associated functions live, separate from
-  the data definition.
-- `new` is an **associated function** (no `self`) — called as `Pos::new(1, 2)`.
-- `step` is a **method** (takes `self`) — called as `p.step(dir)`. It takes `self`
-  *by value*, which is fine because `Pos` is a small `Copy` type.
-- `Self` is an alias for the type the `impl` block is for.
-- `const fn` means `new` can run at compile time.
+## Plain enums with behaviour
 
-## Enums that carry data
-
-Rust enums are *sum types* — each variant can hold different data. Look at
-`NodeKind` in [`crates/train-core/src/map.rs`](../../crates/train-core/src/map.rs):
+`TrainKind` (also `unit.rs`) is a simple enumeration that earns its keep with
+methods:
 
 ```rust
-pub enum NodeKind {
-    Track,                  // internal track (straight or switch)
-    Station { label: u32 }, // a numbered destination
-    DeadEnd,                // a trap
+pub enum TrainKind { Express, Armored, Rocket }
+
+impl TrainKind {
+    pub const ALL: [TrainKind; 3] = [TrainKind::Express, TrainKind::Armored, TrainKind::Rocket];
+
+    pub fn stats(self) -> TrainStats {
+        match self {
+            TrainKind::Express => TrainStats::new(20, 8, 0, 6, 3),
+            TrainKind::Armored => TrainStats::new(80, 10, 0, 12, 5),
+            TrainKind::Rocket  => TrainStats::new(24, 18, 5, 10, 5),
+        }
+    }
 }
 ```
 
-`Station` carries a `u32` label; the other variants carry nothing. A `NodeKind` is
-*exactly one* of these, and you can't read a `label` without first proving you're
-looking at a `Station`. Compare that to a language where you'd have a `type` field
-plus a `label` that's meaningless for non-stations — Rust makes the meaningless
-combinations unrepresentable.
+`Faction` (`mod.rs`), `TowerKind` (`arena.rs`), and `Status` (`state.rs`) are the
+same shape.
+
+## Enums that carry data (sum types)
+
+A Rust enum variant can hold different data. `Command` in
+[`orders.rs`](../../crates/train-core/src/battle/orders.rs):
+
+```rust
+pub enum Command {
+    Deploy { kind: TrainKind, lane: usize },
+    SetSwitch { node: NodeId, choice: u8 },
+}
+```
+
+A `Command` is *exactly one* of these. You can't read a `lane` from a `SetSwitch`
+— the type makes the meaningless combination unrepresentable. `TurnEvent` in
+`resolve.rs` is a richer example (`KingDamaged { faction, amount }`, `Victory {
+faction }`, …).
 
 ## `match`: exhaustive by force
 
-The simulation decides a train's fate in `resolve()` in
-[`crates/train-core/src/sim.rs`](../../crates/train-core/src/sim.rs):
+`apply_orders` in `resolve.rs` destructures commands:
 
 ```rust
-let outcome = match self.map.nodes[node].kind {
-    NodeKind::DeadEnd => Outcome::Ugly,
-    NodeKind::Station { label } => {
-        if label == train.dest {
-            Outcome::Good
-        } else {
-            Outcome::Bad
-        }
-    }
-    NodeKind::Track => return, // not actually terminal; nothing to resolve
+match *cmd {
+    Command::SetSwitch { node, choice } => { /* set routing */ }
+    Command::Deploy { kind, lane } => { /* pay steam, spawn */ }
+}
+```
+
+The `match` must cover **every** variant. Add a new `Command` and this stops
+compiling until you handle it — the compiler keeps your logic in sync with your
+data. `Command::Deploy { kind, lane }` **destructures** the variant, binding its
+fields in one step.
+
+`match` is also an *expression* — `resolve_turn` computes the end-of-match result
+straight into `state.status`:
+
+```rust
+state.status = match a_hp.cmp(&b_hp) {
+    std::cmp::Ordering::Greater => Status::Won(Faction::A),
+    std::cmp::Ordering::Less    => Status::Won(Faction::B),
+    std::cmp::Ordering::Equal   => Status::Draw,
 };
 ```
 
-Key ideas:
+## `matches!` and tuple matching
 
-- The `match` must cover **every** variant. If you add a new `NodeKind`, this
-  stops compiling until you handle it. That's the compiler keeping your logic in
-  sync with your data — a refactoring superpower.
-- `NodeKind::Station { label }` **destructures** the variant, binding its inner
-  `u32` to `label` in one step.
-- `match` is an *expression*: the whole thing evaluates to a value assigned to
-  `outcome`.
-
-## `matches!` for quick boolean checks
-
-When you only need "is it this variant?", the `matches!` macro is concise. From
-`Node` in `map.rs`:
+For "is it over?", `state.rs` uses the `matches!` macro:
 
 ```rust
-pub fn is_switch(&self) -> bool {
-    matches!(self.kind, NodeKind::Track) && self.children.len() == 2
+pub fn is_over(&self) -> bool {
+    !matches!(self.status, Status::Ongoing)
 }
 ```
 
-And with a guard, from the test helper in `sim.rs`:
+And `prune_and_check` decides victory by matching a **tuple** of booleans:
 
 ```rust
-.find(|&s| matches!(map.nodes[s].kind, NodeKind::Station { label } if label == target_label))
+state.status = match (a_dead, b_dead) {
+    (true, true)  => Status::Draw,
+    (true, false) => Status::Won(Faction::B),
+    (false, true) => Status::Won(Faction::A),
+    (false, false) => return,
+};
 ```
-
-The `if label == target_label` is a **match guard** — extra condition on top of
-the pattern.
-
-## A simple C-like enum
-
-Not every enum carries data. `Direction` in `geometry.rs` is a plain enumeration,
-but it still earns its keep with methods:
-
-```rust
-pub enum Direction {
-    North,
-    East,
-    South,
-    West,
-}
-
-impl Direction {
-    pub fn flip(self) -> Direction {
-        match self {
-            Direction::North => Direction::South,
-            Direction::South => Direction::North,
-            Direction::East => Direction::West,
-            Direction::West => Direction::East,
-        }
-    }
-}
-```
-
-`Outcome` in [`score.rs`](../../crates/train-core/src/score.rs) (`Good`/`Bad`/`Ugly`)
-is the same shape, and `Scorer::apply` `match`es on it to update the score.
 
 ## Exercises
 
-1. Add a new `NodeKind` variant, say `Bridge`, and run `cargo build`. List every
-   `match`/`matches!` the compiler flags. That list *is* the set of places your
-   game logic must decide what a bridge does. Then revert.
-2. In `geometry.rs`, write a method `Direction::turn_right(self) -> Direction`
-   using `match`, and a unit test that `North.turn_right() == East`, etc.
-3. Rewrite `Node::is_switch` without `matches!`, using a full `match` that returns
-   `true`/`false`. Which reads better here, and why?
+1. Add a `TrainKind::Saboteur` variant. `cargo build` and let the compiler list
+   every `match` you must update (start with `stats`). That list *is* the work.
+   Then revert.
+2. Write `TowerKind::is_king(self) -> bool` two ways — with `matches!` and with a
+   full `match` — and decide which reads better here.
+3. In `orders.rs`, add a builder method `Orders::deploy_many(kind, n)` that pushes
+   `n` `Deploy` commands. (Structs + methods + a loop.)
 
 Next: [Chapter 3 — Traits, generics & derive →](./03-traits-generics-derive.md)

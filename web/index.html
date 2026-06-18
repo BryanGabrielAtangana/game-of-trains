@@ -2,188 +2,45 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#4fc1e9" />
     <meta
       name="description"
-      content="Game of Trains — route the trains to the right stations. A daily puzzle with global leaderboards and streaks."
+      content="Rail Royale — a turn-based strategy battler on rails. In development."
     />
-    <title>🚂 Game of Trains</title>
-    <link rel="manifest" href="./manifest.webmanifest" />
+    <title>🚂 Rail Royale</title>
     <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="./icons/icon.svg" />
     <style>
-      :root {
-        color-scheme: light;
-        --sky: #4fc1e9;
-        --grass: #a0d468;
-      }
-      * {
-        box-sizing: border-box;
-      }
-      html,
-      body {
-        margin: 0;
-        height: 100%;
-        overflow: hidden;
-        background: linear-gradient(var(--sky) 0%, #8fd6ee 42%, var(--grass) 42%);
+      :root { color-scheme: light; }
+      html, body {
+        margin: 0; height: 100%;
+        background: linear-gradient(#4fc1e9 0%, #8fd6ee 55%, #a0d468 55%);
         font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
-        -webkit-tap-highlight-color: transparent;
-      }
-      /* miniquad owns the sizing of #glcanvas (do not set width/height here in JS). */
-      #glcanvas {
-        position: fixed;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        display: block;
-        z-index: 1;
-        touch-action: none;
-        outline: none;
-      }
-      /* Loading splash, shown behind the (initially transparent) canvas. */
-      #splash {
-        position: fixed;
-        inset: 0;
-        z-index: 0;
-        display: grid;
-        place-items: center;
-        text-align: center;
         color: #2b3a42;
       }
-      #splash .train {
-        font-size: clamp(3rem, 16vw, 5rem);
-        animation: chug 1.1s ease-in-out infinite;
+      main {
+        position: fixed; inset: 0; display: grid; place-items: center; text-align: center;
+        padding: env(safe-area-inset-top) 1rem env(safe-area-inset-bottom);
       }
-      @keyframes chug {
-        0%,
-        100% {
-          transform: translateY(0) rotate(-1deg);
-        }
-        50% {
-          transform: translateY(-8px) rotate(1deg);
-        }
-      }
-      @media (prefers-reduced-motion: reduce) {
-        #splash .train {
-          animation: none;
-        }
-      }
+      .train { font-size: clamp(3rem, 16vw, 5rem); animation: chug 1.1s ease-in-out infinite; }
+      h1 { font-size: clamp(2rem, 9vw, 3.4rem); margin: 0.2em 0 0.1em; letter-spacing: 0.02em; }
+      p { margin: 0.3em 0; max-width: 30rem; opacity: 0.9; }
+      a { color: #2b3a42; }
+      @keyframes chug { 0%,100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-8px) rotate(1deg); } }
+      @media (prefers-reduced-motion: reduce) { .train { animation: none; } }
     </style>
   </head>
   <body>
-    <div id="splash">
+    <main>
       <div>
-        <div class="train">🚂</div>
-        <p>Loading Game of Trains…</p>
+        <div class="train">🚂⚔️</div>
+        <h1>Rail Royale</h1>
+        <p>A turn-based strategy battler on rails — route armed trains across a
+           shared network and destroy the enemy base.</p>
+        <p><strong>In development.</strong> The deterministic battle engine is
+           built and tested; the web client is coming next.</p>
+        <p><a href="https://github.com/BryanGabrielAtangana/game-of-trains">Follow along on GitHub →</a></p>
       </div>
-    </div>
-    <canvas id="glcanvas" tabindex="0"></canvas>
-
-    <script src="./mq_js_bundle.js"></script>
-    <script>
-      // ---- Host bridge: Web Audio sound effects + safe-area inset ----
-      // Exposed to the wasm via miniquad's plugin hook (no audio plugin bundle).
-      let audioCtx = null;
-      function ctx() {
-        if (!audioCtx) {
-          const AC = window.AudioContext || window.webkitAudioContext;
-          if (AC) audioCtx = new AC();
-        }
-        return audioCtx;
-      }
-      // iOS requires a user gesture to start/resume audio.
-      function unlockAudio() {
-        const c = ctx();
-        if (c && c.state === "suspended") c.resume();
-      }
-      window.addEventListener("pointerdown", unlockAudio, { passive: true });
-      window.addEventListener("touchstart", unlockAudio, { passive: true });
-
-      // Schedule a single oscillator note with a short gain envelope.
-      function tone(c, t0, freq, dur, type, vol) {
-        const osc = c.createOscillator();
-        const g = c.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, t0);
-        g.gain.setValueAtTime(0.0001, t0);
-        g.gain.exponentialRampToValueAtTime(vol, t0 + 0.01);
-        g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-        osc.connect(g).connect(c.destination);
-        osc.start(t0);
-        osc.stop(t0 + dur + 0.02);
-      }
-
-      // Synthesize a short sound for each Sfx id (must match crates/.../audio.rs).
-      function playSfx(id) {
-        const c = ctx();
-        if (!c || c.state === "suspended") return;
-        const t = c.currentTime;
-        switch (id) {
-          case 0: // Good — bright two-note rise
-            tone(c, t, 660, 0.12, "sine", 0.25);
-            tone(c, t + 0.09, 990, 0.14, "sine", 0.25);
-            break;
-          case 1: // Bad — low buzz
-            tone(c, t, 160, 0.22, "square", 0.18);
-            break;
-          case 2: // Ugly — descending thud
-            tone(c, t, 220, 0.1, "sawtooth", 0.22);
-            tone(c, t + 0.08, 110, 0.22, "sawtooth", 0.22);
-            break;
-          case 3: // Switch — tiny click
-            tone(c, t, 1200, 0.04, "square", 0.12);
-            break;
-          case 4: // Win — major arpeggio
-            [523, 659, 784, 1047].forEach((f, i) =>
-              tone(c, t + i * 0.1, f, 0.18, "triangle", 0.22),
-            );
-            break;
-          case 5: // Lose — two-note fall
-            tone(c, t, 440, 0.18, "triangle", 0.2);
-            tone(c, t + 0.16, 330, 0.26, "triangle", 0.2);
-            break;
-        }
-      }
-
-      // env(safe-area-inset-top) in physical pixels (matches macroquad's buffer).
-      let safeProbe = null;
-      function safeAreaTopPx() {
-        if (!safeProbe) {
-          safeProbe = document.createElement("div");
-          safeProbe.style.cssText =
-            "position:fixed;top:0;left:0;padding-top:env(safe-area-inset-top);visibility:hidden;pointer-events:none;";
-          document.body.appendChild(safeProbe);
-        }
-        const css = parseFloat(getComputedStyle(safeProbe).paddingTop) || 0;
-        return css * (window.devicePixelRatio || 1);
-      }
-
-      // Register the bridge as a miniquad plugin (adds env imports the wasm needs).
-      miniquad_add_plugin({
-        register_plugin: (importObject) => {
-          importObject.env.play_sfx = (id) => playSfx(id >>> 0);
-          importObject.env.safe_area_top = () => safeAreaTopPx();
-        },
-        on_init: () => {},
-        version: 1,
-        name: "game_host",
-      });
-
-      // Boot the WebAssembly game. miniquad manages the #glcanvas size itself.
-      load("./train-client.wasm");
-
-      // Register the service worker for offline / installable play.
-      if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
-          navigator.serviceWorker
-            .register("./sw.js")
-            .catch((err) => console.warn("SW registration failed:", err));
-        });
-      }
-    </script>
+    </main>
   </body>
 </html>
