@@ -75,9 +75,10 @@ deck, gold "wind-up" energy. Captain Cog is your clockwork conductor.
 
 ## 6. The roster — **train cards**
 
-Five cards for MVP (the reference mock's four + one disruptor). Each card is a
-**unit you deploy into a lane**. Keep the stat vector tiny so balance stays
-tractable: **Cost · HP · Damage · Range · Speed · Special**.
+**Five cards for MVP — locked:** the reference mock's four **plus Saboteur** (the
+disruptor that makes the Shield-vs-Jam mind-game real). Each card is a **unit you
+deploy into a lane**. Keep the stat vector tiny so balance stays tractable:
+**Cost · HP · Damage · Range · Speed · Special**.
 
 > Speed is shown as pips (🐢 slow … ⚡ fast). Range 0 = melee/impact.
 > All numbers **provisional** — they exist so the designer can populate cards.
@@ -247,9 +248,10 @@ Pull straight from the reference mock — warm, rounded, tactile, soft-shadowed.
 
 ## 12. MVP scope (in / out)
 
-**In:** fixed 3-lane board · Wind-Up energy · 5 cards (or the 4 from the mock +
-Saboteur) · Shield/Jam/Overload states · switch dials + routing preview · hidden
-plan → resolve → win/lose · vs-AI (3 difficulties) · the screens above.
+**In:** fixed 3-lane board · Wind-Up energy · **5 cards** (Kamikaze · Engineer ·
+Saboteur · Flak · Heavy) · Shield/Jam/Overload states · switch dials + routing
+preview · hidden plan → resolve → win/lose · vs-AI (3 difficulties) · the screens
+above.
 
 **Out (later):** online PvP & ladder, persistent lineups/collection, currency
 economy & shop, cosmetics, sound design polish, replays/spectating, seasons.
@@ -259,8 +261,7 @@ economy & shop, cosmetics, sound design polish, replays/spectating, seasons.
 1. **Hand + NEXT cycling vs all-cards-available** for MVP (§9) — which feels better?
 2. **How much to telegraph** the opponent (show their Wind-Up? their NEXT?) — more
    info = more strategy, less bluff.
-3. **4 cards (mock) or 5** (add Saboteur now)? Saboteur adds the Jam mind-game but
-   is the most new-engine work.
+3. ~~4 cards or 5~~ — **Resolved: 5 cards, Saboteur included.**
 4. **Switch ownership** — you only set switches in your own half until you take a
    mid-junction, or anywhere you route?
 5. **Art rendering** — flat-with-soft-shadows vs richer gradient depth (the mock
