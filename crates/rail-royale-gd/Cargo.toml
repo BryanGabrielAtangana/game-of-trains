@@ -1,0 +1,16 @@
+[package]
+name = "rail-royale-gd"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Rail Royale — Godot 4 (gdext) bindings. Thin presentation layer; the deterministic game rules live in train-core and are shared with the server."
+
+[lib]
+# GDExtension loads a dynamic library; cdylib produces it for every platform.
+crate-type = ["cdylib"]
+
+[dependencies]
+godot = "0.5"
+train-core = { workspace = true }

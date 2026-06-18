@@ -7,7 +7,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: "-D warnings"
 
 jobs:
   check:
@@ -22,12 +21,17 @@ jobs:
           components: rustfmt, clippy
           targets: wasm32-unknown-unknown
 
+      - name: Install libclang (gdext codegen)
+        run: sudo apt-get update && sudo apt-get install -y libclang-dev
+
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
       - name: Formatting
         run: cargo fmt --all -- --check
 
+      # -D warnings only on our crates (via clippy), not on third-party deps
+      # like `godot`, which we don't control.
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
@@ -36,3 +40,6 @@ jobs:
 
       - name: Engine builds for WebAssembly
         run: cargo build -p train-core --target wasm32-unknown-unknown
+
+      - name: Godot extension builds (release)
+        run: cargo build -p rail-royale-gd --release

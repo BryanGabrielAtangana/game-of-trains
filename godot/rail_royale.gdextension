@@ -1,0 +1,23 @@
+; Tells Godot where to find the Rust GDExtension library per platform.
+; Build it with `cargo build -p rail-royale-gd` (add `--release` for shipping).
+; Paths are relative to this file (godot/ → ../target at the repo root).
+
+[configuration]
+entry_symbol = "gdext_rust_init"
+compatibility_minimum = 4.3
+reloadable = true
+
+[libraries]
+linux.debug.x86_64     = "res://../target/debug/librail_royale_gd.so"
+linux.release.x86_64   = "res://../target/release/librail_royale_gd.so"
+macos.debug            = "res://../target/debug/librail_royale_gd.dylib"
+macos.release          = "res://../target/release/librail_royale_gd.dylib"
+macos.debug.arm64      = "res://../target/debug/librail_royale_gd.dylib"
+macos.release.arm64    = "res://../target/release/librail_royale_gd.dylib"
+windows.debug.x86_64   = "res://../target/debug/rail_royale_gd.dll"
+windows.release.x86_64 = "res://../target/release/rail_royale_gd.dll"
+; Mobile / web (experimental — see docs/godot/README.md for the toolchain):
+android.debug.arm64    = "res://../target/aarch64-linux-android/debug/librail_royale_gd.so"
+android.release.arm64  = "res://../target/aarch64-linux-android/release/librail_royale_gd.so"
+web.debug.wasm32       = "res://../target/wasm32-unknown-emscripten/debug/rail_royale_gd.wasm"
+web.release.wasm32     = "res://../target/wasm32-unknown-emscripten/release/rail_royale_gd.wasm"

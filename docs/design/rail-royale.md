@@ -7,6 +7,10 @@
 > 👉 **For the MVP we're prototyping now, see [`mvp-brief.md`](./mvp-brief.md)** —
 > the design artefact (train cards, states, strategy, screens, visual direction)
 > handed to the design tool. MVP locks the board at **3 lanes**.
+>
+> 🛠 **Tech stack (decided):** the cross-platform client (browser + iOS + Android)
+> is **Godot 4 + Rust (gdext)**, with `train-core` reused as the shared rules
+> engine. Setup, status and export steps: [`../godot/README.md`](../godot/README.md).
 
 ## 1. Vision
 A **strategy battler on rails**: Clash Royale's two-sided arena × Mini Metro's

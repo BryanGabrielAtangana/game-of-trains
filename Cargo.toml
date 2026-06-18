@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/train-core"]
+members = ["crates/train-core", "crates/rail-royale-gd"]
 # The retired daily-puzzle crates live under legacy/ (kept for history, not built).
 exclude = ["legacy"]
 
@@ -20,4 +20,5 @@ serde_json = "1"
 opt-level = 3
 lto = true
 codegen-units = 1
-panic = "abort"
+# NB: no `panic = "abort"` — gdext relies on unwinding to catch Rust panics at the
+# Godot FFI boundary instead of crashing the engine.
