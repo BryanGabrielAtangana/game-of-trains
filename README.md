@@ -89,6 +89,13 @@ This repo doubles as a **hands-on Rust course**: see
 [`docs/learning-rust/`](./docs/learning-rust/README.md). Each chapter teaches a
 Rust concept using *real code from this codebase*, with exercises.
 
+## Where it's headed
+
+Beyond the solo daily puzzle, the design for a strategy battler — **Rail Royale**
+(simultaneous, hidden commit-and-resolve turns on a shared switchable rail
+network, async online PvP, server-verified for fairness) — lives in
+[`docs/design/rail-royale.md`](./docs/design/rail-royale.md).
+
 ## License
 
 MIT.
