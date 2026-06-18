@@ -12,12 +12,14 @@
 //! routes *its own* trains (switch ownership is per-faction, not yet contested),
 //! and combat math is intentionally small so it stays easy to balance.
 
+mod ai;
 mod arena;
 mod orders;
 mod resolve;
 mod state;
 mod unit;
 
+pub use ai::{ai_orders, AiLevel};
 pub use arena::{Arena, BattleConfig, NodeId, Tower, TowerKind};
 pub use orders::{Command, Orders};
 pub use resolve::{resolve_turn, TurnEvent};

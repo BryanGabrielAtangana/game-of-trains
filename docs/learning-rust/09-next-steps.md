@@ -5,25 +5,48 @@ testing, and determinism — all through the real battle engine. The next phases
 Rail Royale (see [`docs/design/rail-royale.md`](../design/rail-royale.md)) are
 where you apply them to new domains.
 
-## Phase 2 — single-player vs an AI
+## Phase 2 — single-player vs an AI ✅ (shipped)
 
 A heuristic opponent that picks `Orders` each turn, so you can tune feel and
-balance entirely offline (and it doubles as onboarding). A sketch you could add to
-`train-core`:
+balance entirely offline (and it doubles as onboarding). This now lives in
+[`crates/train-core/src/battle/ai.rs`](../../crates/train-core/src/battle/ai.rs)
+as a **pure, deterministic** function:
 
 ```rust
-/// Pick a plan for `me` given the current state (pure, deterministic, testable).
-pub fn ai_orders(state: &BattleState, me: Faction) -> Orders {
-    let mut o = Orders::new();
-    if state.steam[me.index()] >= TrainKind::Rocket.stats().cost {
-        o = o.deploy(TrainKind::Rocket, 0); // naive: shell down a lane
-    }
-    o
-}
+use train_core::{ai_orders, AiLevel, BattleState, BattleConfig, Faction};
+
+let state = BattleState::new(BattleConfig::default());
+let plan = ai_orders(&state, Faction::A, AiLevel::Normal);
 ```
 
-Rust you'll exercise: pattern matching over state, iterators to score options,
-and **unit tests** that assert the AI never issues an unaffordable plan.
+It reads the board, **counter-picks** the kind the enemy fields most (the
+counter-triangle from Chapter 2's enums), **defends** the lane where a train is
+nearest its King, and **spends steam** without ever going over budget. `AiLevel`
+(`Easy`/`Normal`/`Hard`) tunes greed and whether it routes switches.
+
+The Rust this exercises, chapter by chapter:
+
+- **Pattern matching** (Ch. 2) over `TrainKind` / `AiLevel` to choose a counter.
+- **Iterators** (Ch. 5) — `filter` + `min_by_key` to find the closest threat and
+  the cheapest affordable unit, with **no allocation**.
+- **`Option`** (Ch. 4) — `threat_lane` returns `Option<usize>`; the caller uses
+  `unwrap_or` / `if let`.
+- **Testing & determinism** (Ch. 7–8): the module's tests assert the AI never
+  overspends, never deploys while broke, is reproducible, and that *two AIs
+  playing each other always reach the same terminal `Status`* — the capstone.
+
+Because it's deterministic, the example
+[`examples/selfplay.rs`](../../crates/train-core/examples/selfplay.rs) pits every
+difficulty pairing against each other and prints the results:
+
+```text
+cargo run -p train-core --example selfplay
+```
+
+That table is your **balance dashboard**: tweak `TrainKind::stats()` or
+`BattleConfig`, re-run, and watch outcomes shift — pure functions make balance a
+spreadsheet, not a guessing game. (Right now the default config is draw-heavy —
+towers out-trade single-file streams — which is the first thing to tune.)
 
 ## Phase 3 — async online PvP (the match server)
 
@@ -64,10 +87,20 @@ then decks, MMR, replays and live turns.
 
 ## A capstone exercise
 
-Add a **deterministic AI** (Phase 2 above) *and* prove with a test that two AIs
+The deterministic AI (Phase 2 above) is done, including the test that two AIs
 playing each other from the same config always reach the same `Status` — a real
-use of determinism, pattern matching, iterators, and testing together. From there,
-wiring it into the match server is "just" I/O around the engine you understand.
+use of determinism, pattern matching, iterators, and testing together. Your turn:
+**make the AI smarter or the game more decisive.** Pick one:
+
+- Teach `counter_pick` to weigh enemy *steam* and tower HP, not just unit counts.
+- Add an `AiLevel::Insane` that simulates a turn ahead with `resolve_turn` on a
+  cloned state and keeps the plan that does the most King damage (`BattleState`
+  is `Clone` precisely so you can do this).
+- Re-tune `BattleConfig`/`TrainKind::stats()` until `selfplay` stops drawing, then
+  add a test pinning the matchup you want.
+
+From there, wiring it into the match server is "just" I/O around the engine you
+understand.
 
 ---
 

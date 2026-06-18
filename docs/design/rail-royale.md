@@ -124,8 +124,14 @@ over-committed routes. No single dominant pick = real decisions.
 1. ✅ **Engine combat slice** — `battle` module: arena gen, orders, `resolve_turn`,
    towers, 3 train types, win check. Unit-tested, deterministic. *No UI.* (Done —
    `crates/train-core/src/battle/`.)
-2. **Vs-AI single-player** — a simple heuristic opponent to tune feel & balance
-   entirely offline (and it doubles as a tutorial/onboarding mode).
+2. ✅ **Vs-AI single-player** — heuristic opponent (`battle::ai`,
+   `ai_orders(state, faction, level)`): counter-picks the enemy's most-fielded
+   kind, defends the threatened lane, manages steam, and (on Hard) routes its
+   switches. Pure, deterministic, unit-tested; an `examples/selfplay.rs` harness
+   runs every difficulty matchup for offline balance tuning. **Balance finding:**
+   the default `BattleConfig` is draw-heavy — towers out-trade single-file
+   streams, so most games stall at the turn cap. Decisive-game tuning (steam,
+   `ticks_per_turn`, `king_hp`/tower stats) is the next balance pass.
 3. **Async online PvP** — match server (Axum + SQLx + Postgres on Shuttle.rs):
    create/join match, submit a turn's orders, server resolves + verifies, push
    the resolved state to both. Reuses the Phase-4 backend foundation.

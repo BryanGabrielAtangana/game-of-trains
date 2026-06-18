@@ -31,8 +31,8 @@ pub mod geometry;
 pub mod rng;
 
 pub use battle::{
-    resolve_turn, Arena, BattleConfig, BattleState, Command, Faction, NodeId, Orders, Status,
-    Tower, TowerKind, Train, TrainKind, TrainStats, TurnEvent,
+    ai_orders, resolve_turn, AiLevel, Arena, BattleConfig, BattleState, Command, Faction, NodeId,
+    Orders, Status, Tower, TowerKind, Train, TrainKind, TrainStats, TurnEvent,
 };
 pub use geometry::{Direction, Pos};
 
