@@ -22,7 +22,7 @@ mod unit;
 pub use ai::{ai_orders, AiLevel};
 pub use arena::{Arena, BattleConfig, NodeId, Tower, TowerKind};
 pub use orders::{Command, Orders};
-pub use resolve::{resolve_turn, TurnEvent};
+pub use resolve::{resolve_turn, resolve_turn_frames, TurnEvent};
 pub use state::{BattleState, Status};
 pub use unit::{Train, TrainKind, TrainStats};
 
@@ -69,6 +69,30 @@ mod tests {
             max_turns: 30,
             ..BattleConfig::default()
         }
+    }
+
+    #[test]
+    fn frames_match_plain_resolve_and_are_per_tick() {
+        // resolve_turn_frames must leave the state identical to resolve_turn, and
+        // hand back one frame per tick plus the initial post-deploy snapshot.
+        let cfg = duel_cfg();
+        let a = Orders::new().deploy(TrainKind::Express, 0);
+        let b = Orders::new().deploy(TrainKind::Armored, 0);
+
+        let mut plain = BattleState::new(cfg.clone());
+        resolve_turn(&mut plain, &a, &b);
+
+        let mut traced = BattleState::new(cfg.clone());
+        let (_events, frames) = resolve_turn_frames(&mut traced, &a, &b);
+
+        assert_eq!(plain, traced, "frames variant must not change the outcome");
+        assert_eq!(
+            frames.len() as u32,
+            cfg.ticks_per_turn + 1,
+            "one frame per tick + the initial post-deploy frame"
+        );
+        // The first frame is before movement: trains sit at progress 0.
+        assert!(frames[0].trains.iter().all(|t| t.progress == 0));
     }
 
     #[test]

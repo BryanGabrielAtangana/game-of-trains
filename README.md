@@ -5,9 +5,10 @@ across a shared, switchable rail network to destroy each other's King tower. Pla
 is **commit-and-resolve**: each turn both sides secretly plan (deploy trains, set
 routing switches), then the turn resolves deterministically.
 
-> **Status:** Phase 1 complete — the deterministic battle **engine** (`train-core`)
-> is built and unit-tested, and compiles to native + WebAssembly. The game client
-> and online match server come next. The full design lives in
+> **Status:** **playable vs the AI in your browser** → **[play it here](https://bryangabrielatangana.github.io/game-of-trains/)**.
+> The deterministic battle **engine** (`train-core`) is built and unit-tested; a
+> heuristic **AI opponent** (Phase 2) and a WebAssembly **client** (Phase 4, vs-AI
+> slice) are live. The online match server (Phase 3) is next. Full design:
 > [`docs/design/rail-royale.md`](./docs/design/rail-royale.md).
 >
 > This project began as a solo daily routing puzzle (a 2019 jQuery game,
@@ -52,12 +53,28 @@ practical because client and server share the exact same Rust code.
 Deterministic primitives (`rng.rs`, `geometry.rs`) and the daily-seed helpers are
 shared from the puzzle era.
 
+## The client (Phase 4 vs-AI slice, today)
+
+`crates/train-client` compiles to `wasm32-unknown-unknown` and renders the battle
+on a 2D `<canvas>` — **menu → plan → watch it resolve → win/lose**, mobile-first.
+Deliberately **no game framework and no `wasm-bindgen`** (that fragility sank the
+old puzzle client): all game *and rendering* logic is Rust that emits a small JSON
+**display list**, and a ~60-line JS loader (`web/index.html`) just paints it and
+forwards taps. The module exposes a handful of `#[no_mangle]` functions; the wasm
+has **zero imports**, so the browser boot can't fail on linking.
+
 ## Running it
 
 ```bash
-cargo test -p train-core    # engine invariants, combat, determinism, win
+cargo test --workspace      # engine invariants, combat, determinism, AI, win
 cargo doc -p train-core --open
-cargo build -p train-core --target wasm32-unknown-unknown   # proves portability
+
+# Build + play the web client locally:
+./scripts/build-web.sh
+python3 -m http.server -d web 8080   # then open http://localhost:8080
+
+# Tune balance offline (AI vs AI across difficulties):
+cargo run -p train-core --example selfplay
 ```
 
 A tiny taste:
@@ -75,11 +92,12 @@ train_core::resolve_turn(&mut state, &a, &b);
 
 - [x] **Phase 1 — engine slice:** arena, orders, `resolve_turn`, towers, train
       types, win check. Deterministic, unit-tested. *No UI.*
-- [ ] **Phase 2 — vs-AI single-player:** a heuristic opponent to tune feel/balance
-      offline (doubles as onboarding).
+- [x] **Phase 2 — vs-AI single-player:** a heuristic opponent (`battle::ai`) to
+      tune feel/balance offline (doubles as onboarding), plus a balance pass.
+- [x] **Phase 4 (vs-AI slice) — web client:** WASM + canvas, playable vs the AI.
 - [ ] **Phase 3 — async online PvP:** match server (Axum + SQLx + Postgres on
       Shuttle.rs) — create/join, submit a turn's orders, server resolves + verifies.
-- [ ] **Phase 4 — polish & ladder:** full roster, decks, MMR, replays, live turns.
+- [ ] **Phase 4 (full) — polish & ladder:** full roster, decks, MMR, replays, live turns.
 
 ## Learning Rust alongside this project
 

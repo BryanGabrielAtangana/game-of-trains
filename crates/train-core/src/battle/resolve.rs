@@ -23,6 +23,29 @@ pub enum TurnEvent {
 /// Returns the events that occurred. Deterministic: identical inputs → identical
 /// result on every platform (the basis for server-side verification).
 pub fn resolve_turn(state: &mut BattleState, a: &Orders, b: &Orders) -> Vec<TurnEvent> {
+    resolve_inner(state, a, b, None)
+}
+
+/// Like [`resolve_turn`], but also returns a snapshot of the state after each
+/// simulation tick (the first frame is the post-deploy board, before any
+/// movement). Used by the client to animate a turn and by replays; `state` itself
+/// ends in the same final position as [`resolve_turn`].
+pub fn resolve_turn_frames(
+    state: &mut BattleState,
+    a: &Orders,
+    b: &Orders,
+) -> (Vec<TurnEvent>, Vec<BattleState>) {
+    let mut frames = Vec::new();
+    let events = resolve_inner(state, a, b, Some(&mut frames));
+    (events, frames)
+}
+
+fn resolve_inner(
+    state: &mut BattleState,
+    a: &Orders,
+    b: &Orders,
+    mut frames: Option<&mut Vec<BattleState>>,
+) -> Vec<TurnEvent> {
     let mut events = Vec::new();
     if state.is_over() {
         return events;
@@ -30,6 +53,9 @@ pub fn resolve_turn(state: &mut BattleState, a: &Orders, b: &Orders) -> Vec<Turn
 
     apply_orders(state, Faction::A, a);
     apply_orders(state, Faction::B, b);
+    if let Some(f) = frames.as_deref_mut() {
+        f.push(state.clone());
+    }
 
     for _ in 0..state.cfg.ticks_per_turn {
         if state.is_over() {
@@ -37,6 +63,9 @@ pub fn resolve_turn(state: &mut BattleState, a: &Orders, b: &Orders) -> Vec<Turn
         }
         step(state, &mut events);
         state.tick += 1;
+        if let Some(f) = frames.as_deref_mut() {
+            f.push(state.clone());
+        }
     }
 
     state.turn += 1;

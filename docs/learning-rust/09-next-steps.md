@@ -72,11 +72,29 @@ Rust you'll exercise: `Result`/`?` end to end, traits & generics (Axum's
 `State<T>`/`Json<T>`), `async`/`.await`, and the `serde` feature carrying
 `Orders`/`BattleState` over the wire.
 
-## Phase 4 — client, polish & ladder
+## Phase 4 — the web client ✅ (vs-AI slice shipped)
 
-A `macroquad` (or similar) client compiled to WebAssembly renders the arena,
-towers, HP bars and two-colour factions, and provides the hidden plan-phase UI;
-then decks, MMR, replays and live turns.
+[`crates/train-client`](../../crates/train-client) compiles to
+`wasm32-unknown-unknown` as a `cdylib` and renders the battle on a 2D `<canvas>` —
+menu → plan → resolve → win/lose — playable vs the Phase-2 AI. It deliberately
+uses **no game framework and no `wasm-bindgen`**: all logic *and* rendering is Rust
+that emits a small JSON **display list**, and a ~60-line JS loader paints it.
+
+New Rust this introduces:
+
+- **FFI / `#[no_mangle] extern "C"`** — the only boundary to JS. The whole game is
+  one thread-local `Client`; functions like `rr_pointer`, `rr_tick`, `rr_render`
+  drive it. The wasm exports its `memory`, so JS reads the scene JSON straight out
+  of WASM linear memory at `(ptr, len)`.
+- **`thread_local!` + `RefCell`** — safe global mutable state on a single-threaded
+  wasm target, without `static mut` or `unsafe`.
+- **`serde` serialization in anger** (Chapter 6) — the `Scene`/`DrawOp` display
+  list is `Serialize`d to JSON every frame.
+- **The engine grew `resolve_turn_frames`** — returns a per-tick snapshot `Vec` so
+  the client can *animate* a turn; the same data will drive replays later.
+
+Try it: `./scripts/build-web.sh` then serve `web/`. Still ahead (full Phase 4):
+richer animation/juice, polished switch-routing UI, decks, MMR, replays, live turns.
 
 ## Recommended resources
 

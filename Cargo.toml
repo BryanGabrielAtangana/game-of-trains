@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/train-core"]
+members = ["crates/train-core", "crates/train-client"]
 # The retired daily-puzzle crates live under legacy/ (kept for history, not built).
 exclude = ["legacy"]
 

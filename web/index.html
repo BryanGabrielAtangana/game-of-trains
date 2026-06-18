@@ -2,45 +2,158 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#4fc1e9" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#16222b" />
     <meta
       name="description"
-      content="Rail Royale — a turn-based strategy battler on rails. In development."
+      content="Rail Royale — a turn-based strategy battler on rails. Route armed trains across a shared network and destroy the enemy King."
     />
     <title>🚂 Rail Royale</title>
     <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="./manifest.webmanifest" />
     <style>
-      :root { color-scheme: light; }
+      :root { color-scheme: dark; }
       html, body {
-        margin: 0; height: 100%;
-        background: linear-gradient(#4fc1e9 0%, #8fd6ee 55%, #a0d468 55%);
+        margin: 0; height: 100%; overflow: hidden;
+        background: #16222b; color: #f4f9fb;
         font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
-        color: #2b3a42;
+        -webkit-user-select: none; user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: none;
       }
-      main {
+      #game { display: block; width: 100vw; height: 100vh; }
+      #boot {
         position: fixed; inset: 0; display: grid; place-items: center; text-align: center;
-        padding: env(safe-area-inset-top) 1rem env(safe-area-inset-bottom);
+        padding: 1rem; gap: 0.4rem;
       }
-      .train { font-size: clamp(3rem, 16vw, 5rem); animation: chug 1.1s ease-in-out infinite; }
-      h1 { font-size: clamp(2rem, 9vw, 3.4rem); margin: 0.2em 0 0.1em; letter-spacing: 0.02em; }
-      p { margin: 0.3em 0; max-width: 30rem; opacity: 0.9; }
-      a { color: #2b3a42; }
-      @keyframes chug { 0%,100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-8px) rotate(1deg); } }
-      @media (prefers-reduced-motion: reduce) { .train { animation: none; } }
+      #boot .t { font-size: clamp(2.6rem, 14vw, 4rem); animation: chug 1.1s ease-in-out infinite; }
+      @keyframes chug { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }
+      #boot small { color: #9fb3bd; }
     </style>
   </head>
   <body>
-    <main>
-      <div>
-        <div class="train">🚂⚔️</div>
-        <h1>Rail Royale</h1>
-        <p>A turn-based strategy battler on rails — route armed trains across a
-           shared network and destroy the enemy base.</p>
-        <p><strong>In development.</strong> The deterministic battle engine is
-           built and tested; the web client is coming next.</p>
-        <p><a href="https://github.com/BryanGabrielAtangana/game-of-trains">Follow along on GitHub →</a></p>
-      </div>
-    </main>
+    <canvas id="game"></canvas>
+    <div id="boot"><div><div class="t">🚂⚔️</div><div>Loading Rail Royale…</div></div></div>
+
+    <script>
+      (async () => {
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+        const boot = document.getElementById("boot");
+
+        let wasm, mem;
+        try {
+          // Plain wasm32-unknown-unknown module: zero imports, so an empty
+          // import object always satisfies it — the boot can't fail on linking.
+          const res = await fetch("./rail_royale.wasm?v=1", { cache: "no-cache" });
+          const { instance } = await WebAssembly.instantiate(await res.arrayBuffer(), {});
+          wasm = instance.exports;
+          mem = () => new Uint8Array(wasm.memory.buffer);
+        } catch (e) {
+          boot.innerHTML = "<div><div class='t'>🚧</div><div>Failed to load the game.</div>" +
+            "<small>" + (e && e.message ? e.message : e) + "</small></div>";
+          return;
+        }
+        boot.remove();
+
+        let dpr = 1, cssW = 0, cssH = 0;
+        function resize() {
+          dpr = Math.min(window.devicePixelRatio || 1, 3);
+          cssW = window.innerWidth;
+          cssH = window.innerHeight;
+          canvas.width = Math.round(cssW * dpr);
+          canvas.height = Math.round(cssH * dpr);
+          canvas.style.width = cssW + "px";
+          canvas.style.height = cssH + "px";
+          if (wasm.__started) wasm.rr_resize(cssW, cssH);
+        }
+        window.addEventListener("resize", resize);
+        resize();
+
+        wasm.rr_init(cssW, cssH);
+        wasm.__started = true;
+
+        function pointerXY(ev) {
+          const r = canvas.getBoundingClientRect();
+          const p = ev.touches && ev.touches[0] ? ev.touches[0] : ev;
+          return [p.clientX - r.left, p.clientY - r.top];
+        }
+        function onDown(ev) {
+          ev.preventDefault();
+          const [x, y] = pointerXY(ev);
+          wasm.rr_pointer(x, y);
+        }
+        canvas.addEventListener("pointerdown", onDown, { passive: false });
+        canvas.addEventListener("touchstart", onDown, { passive: false });
+
+        function readScene() {
+          const len = wasm.rr_render();
+          const ptr = wasm.rr_render_ptr();
+          const bytes = mem().subarray(ptr, ptr + len);
+          return JSON.parse(new TextDecoder().decode(bytes));
+        }
+
+        function roundRect(x, y, w, h, r) {
+          r = Math.max(0, Math.min(r, Math.min(w, h) / 2));
+          ctx.beginPath();
+          ctx.moveTo(x + r, y);
+          ctx.arcTo(x + w, y, x + w, y + h, r);
+          ctx.arcTo(x + w, y + h, x, y + h, r);
+          ctx.arcTo(x, y + h, x, y, r);
+          ctx.arcTo(x, y, x + w, y, r);
+          ctx.closePath();
+        }
+
+        function paint(scene) {
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          for (const o of scene.ops) {
+            switch (o.op) {
+              case "Rect":
+                ctx.fillStyle = o.fill;
+                roundRect(o.x, o.y, o.w, o.h, o.round);
+                ctx.fill();
+                break;
+              case "Circle":
+                ctx.beginPath();
+                ctx.arc(o.x, o.y, Math.max(0, o.r), 0, Math.PI * 2);
+                ctx.fillStyle = o.fill;
+                ctx.fill();
+                if (o.lw > 0) { ctx.lineWidth = o.lw; ctx.strokeStyle = o.stroke; ctx.stroke(); }
+                break;
+              case "Line":
+                ctx.beginPath();
+                ctx.moveTo(o.x1, o.y1);
+                ctx.lineTo(o.x2, o.y2);
+                ctx.lineWidth = o.lw;
+                ctx.strokeStyle = o.stroke;
+                ctx.lineCap = "round";
+                ctx.stroke();
+                break;
+              case "Text":
+                ctx.fillStyle = o.fill;
+                ctx.textAlign = o.align;
+                ctx.textBaseline = o.baseline;
+                ctx.font = o.weight + " " + o.size +
+                  "px 'Trebuchet MS','Segoe UI',system-ui,sans-serif";
+                ctx.fillText(o.text, o.x, o.y);
+                break;
+            }
+          }
+        }
+
+        let last = performance.now();
+        function frame(now) {
+          const dt = Math.min(now - last, 100);
+          last = now;
+          wasm.rr_tick(dt);
+          paint(readScene());
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      })();
+    </script>
   </body>
 </html>

@@ -1,0 +1,19 @@
+{
+  "name": "Rail Royale",
+  "short_name": "Rail Royale",
+  "description": "A turn-based strategy battler on rails. Route armed trains and destroy the enemy King.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#16222b",
+  "theme_color": "#16222b",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
