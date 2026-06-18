@@ -45,8 +45,10 @@ cargo run -p train-core --example selfplay
 
 That table is your **balance dashboard**: tweak `TrainKind::stats()` or
 `BattleConfig`, re-run, and watch outcomes shift — pure functions make balance a
-spreadsheet, not a guessing game. (Right now the default config is draw-heavy —
-towers out-trade single-file streams — which is the first thing to tune.)
+spreadsheet, not a guessing game. It already paid off: the harness exposed a
+draw-heavy default (towers were melting single-file streams), which a balance pass
+fixed by making tower stats part of `BattleConfig` and tuning them — now every
+asymmetric matchup is decisive and a test pins the `Hard > Normal > Easy` ladder.
 
 ## Phase 3 — async online PvP (the match server)
 

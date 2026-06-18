@@ -33,6 +33,12 @@ pub struct BattleConfig {
     pub steam_cap: u32,
     pub king_hp: i32,
     pub side_tower_hp: i32,
+    /// King tower fire (squared range is compared; damage is per tick).
+    pub king_range: i32,
+    pub king_damage: i32,
+    /// Side tower fire.
+    pub side_range: i32,
+    pub side_damage: i32,
     /// Hard cap on turns before sudden-death/draw handling (kept simple here).
     pub max_turns: u32,
 }
@@ -43,13 +49,20 @@ impl Default for BattleConfig {
             seed: 1,
             cols: 3,
             rows: 4,
-            ticks_per_turn: 24,
+            ticks_per_turn: 30,
             steam_start: 6,
-            steam_per_turn: 4,
-            steam_cap: 12,
+            steam_per_turn: 8,
+            steam_cap: 24,
             king_hp: 100,
             side_tower_hp: 50,
-            max_turns: 20,
+            // Towers defend but no longer melt single-file streams instantly
+            // (balance pass; see docs/design/rail-royale.md). Rockets (range 5)
+            // keep their 1-tile siege edge over the King (range 4).
+            king_range: 4,
+            king_damage: 2,
+            side_range: 5,
+            side_damage: 2,
+            max_turns: 24,
         }
     }
 }
@@ -167,16 +180,16 @@ impl Arena {
                 kind: TowerKind::King,
                 node: a_king,
                 hp: cfg.king_hp,
-                range: 4,
-                damage: 6,
+                range: cfg.king_range,
+                damage: cfg.king_damage,
             },
             Tower {
                 faction: Faction::B,
                 kind: TowerKind::King,
                 node: b_king,
                 hp: cfg.king_hp,
-                range: 4,
-                damage: 6,
+                range: cfg.king_range,
+                damage: cfg.king_damage,
             },
         ];
         if cols >= 2 {
@@ -186,8 +199,8 @@ impl Arena {
                     kind: TowerKind::Side,
                     node: id(r, 0),
                     hp: cfg.side_tower_hp,
-                    range: 5,
-                    damage: 4,
+                    range: cfg.side_range,
+                    damage: cfg.side_damage,
                 });
             }
         }
