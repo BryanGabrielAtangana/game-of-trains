@@ -128,10 +128,15 @@ over-committed routes. No single dominant pick = real decisions.
    `ai_orders(state, faction, level)`): counter-picks the enemy's most-fielded
    kind, defends the threatened lane, manages steam, and (on Hard) routes its
    switches. Pure, deterministic, unit-tested; an `examples/selfplay.rs` harness
-   runs every difficulty matchup for offline balance tuning. **Balance finding:**
-   the default `BattleConfig` is draw-heavy — towers out-trade single-file
-   streams, so most games stall at the turn cap. Decisive-game tuning (steam,
-   `ticks_per_turn`, `king_hp`/tower stats) is the next balance pass.
+   runs every difficulty matchup for offline balance tuning. **Balance pass
+   (done):** the harness showed the old default `BattleConfig` was draw-heavy —
+   towers (King dmg 6/tick) melted single-file streams before they could land a
+   hit, so only Rockets (which out-range the King) ever worked and games stalled
+   at the cap. Tower stats are now part of `BattleConfig`; the tuned defaults
+   (King dmg 6→2, steam/turn 4→8, more ticks/turn) make all asymmetric matchups
+   decisive while equal-skill mirrors still draw, and a regression test pins the
+   `Hard > Normal > Easy` ladder. Rockets keep their 1-tile siege edge over the
+   King. Finer per-train tuning can continue against the same harness.
 3. **Async online PvP** — match server (Axum + SQLx + Postgres on Shuttle.rs):
    create/join match, submit a turn's orders, server resolves + verifies, push
    the resolved state to both. Reuses the Phase-4 backend foundation.
