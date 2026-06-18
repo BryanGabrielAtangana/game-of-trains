@@ -3,6 +3,10 @@
 > Status: **brainstorm → spec in progress.** Numbers marked _(provisional)_ are
 > starting points to tune, not commitments. This is the depth/PvP layer we grow
 > toward; the shipped daily routing puzzle stays as the casual on-ramp.
+>
+> 👉 **For the MVP we're prototyping now, see [`mvp-brief.md`](./mvp-brief.md)** —
+> the design artefact (train cards, states, strategy, screens, visual direction)
+> handed to the design tool. MVP locks the board at **3 lanes**.
 
 ## 1. Vision
 A **strategy battler on rails**: Clash Royale's two-sided arena × Mini Metro's
